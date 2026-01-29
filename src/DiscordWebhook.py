@@ -7,43 +7,43 @@ from discord_webhook import DiscordEmbed, DiscordWebhook
 
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1466510737009803420/SPhFts6q0B_fac2FYEdHrEzmFIRAkZcYvZmKFy8-FmlLUN7-p0AJGZqOMEwOHK8Uy6mP"
 
-class DiscordWebhook:
-    """Very small wrapper around :mod:`discord_webhook`."""
+def _resolve_webhook_url(webhook_url: Optional[str]) -> str:
+    return (webhook_url or DISCORD_WEBHOOK_URL).strip()
 
-    def __init__(self, webhook_url: Optional[str] = None) -> None:
-        self.webhook_url = (webhook_url or DISCORD_WEBHOOK_URL).strip()
 
-    def _send(self, title: str, description: str, file_path: Optional[str] = None) -> None:
-        if not self.webhook_url:
-            return
+def post_text(message: str, webhook_url: Optional[str] = None, username: str = "QB-PIER") -> None:
+    """Post a plain text message to Discord."""
+    resolved_url = _resolve_webhook_url(webhook_url)
+    if not resolved_url:
+        return
 
-        webhook = DiscordWebhook(url=self.webhook_url, username="QB-PIER")
-        embed = DiscordEmbed(title=title, description=description)
-        webhook.add_embed(embed)
+    webhook = DiscordWebhook(url=resolved_url, username=username, content=message)
+    try:
+        webhook.execute()
+    except Exception:
+        # The logger should never break training, so ignore webhook errors.
+        pass
 
-        if file_path and os.path.exists(file_path):
-            with open(file_path, "rb") as file_data:
-                webhook.add_file(file=file_data.read(), filename=os.path.basename(file_path))
+def post_image_with_caption(
+    image_path: str,
+    caption: str,
+    webhook_url: Optional[str] = None,
+    username: str = "QB-PIER",
+) -> None:
+    """Post an image file with a caption to Discord."""
+    resolved_url = _resolve_webhook_url(webhook_url)
+    if not resolved_url or not image_path or not os.path.exists(image_path):
+        return
 
-        try:
-            webhook.execute()
-        except Exception:
-            # The logger should never break training, so ignore webhook errors.
-            pass
+    webhook = DiscordWebhook(url=resolved_url, username=username)
+    embed = DiscordEmbed(description=caption)
+    webhook.add_embed(embed)
 
-    def log_exp_start(self, model_name: str, seeds, log_dir: str) -> None:
-        title = f"Starting training for `{model_name}`"
-        message = f"Seeds: {seeds}\nConfiguration: {log_dir}"
-        self._send(title, message)
+    with open(image_path, "rb") as file_data:
+        webhook.add_file(file=file_data.read(), filename=os.path.basename(image_path))
 
-    def log_exp_failed(self, model_name: str, seed: int, error: str) -> None:
-        title = f"Training failed for `{model_name}` (seed {seed})"
-        message = f"Error: ```{error}```"
-        self._send(title, message)
-
-    def log_exp_finished(self, model_name: str, log_dir: str, trained, expected, duration: float, figure_path: str) -> None:
-        title = f"Training completed for `{model_name}`"
-        hours = int(duration // 3600)
-        minutes = int((duration % 3600) // 60)
-        message = f"Directory: `{log_dir}`\nTrained {trained}/{expected} seeds\nDuration: {hours}h {minutes}m"
-        self._send(title, message, figure_path)
+    try:
+        webhook.execute()
+    except Exception:
+        # The logger should never break training, so ignore webhook errors.
+        pass
