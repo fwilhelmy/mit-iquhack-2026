@@ -9,6 +9,8 @@ from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, qasm3
 class BaseCircuit(ABC):
     """Base class for circuits used to claim edges in the game."""
 
+    min_bell_pairs = 1
+
     def __init__(
         self,
         num_bell_pairs: int = 2,

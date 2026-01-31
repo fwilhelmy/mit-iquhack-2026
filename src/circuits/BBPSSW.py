@@ -8,6 +8,8 @@ from circuits.BaseCircuit import BaseCircuit
 class BBPSSW(BaseCircuit):
     """Two-pair recurrence (BBPSSW/DEJMPS-style) distillation circuit."""
 
+    min_bell_pairs = 2
+
     def build_circuit(self) -> QuantumCircuit:
         if self.num_bell_pairs < 2:
             raise ValueError("BBPSSW requires at least two Bell pairs.")
