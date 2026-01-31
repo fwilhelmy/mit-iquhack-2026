@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from circuit_runner import load_distillation_circuit
+from game import Game
 from session import Session
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -79,9 +80,9 @@ def claim_first_edge(
         f"with {num_bell_pairs} Bell pairs..."
     )
 
-    result = client.claim_edge(
+    result = game.client.claim_edge(
         edge_id, circuit, flag_bit, num_bell_pairs=num_bell_pairs
-    )
+
     if result.get("ok"):
         data = result["data"]
         print(f"Success: {data.get('success')}")
@@ -97,10 +98,11 @@ def claim_first_edge(
 def main() -> None:
     session = Session()
     client = session.client
+    game = Game(client)
 
     ensure_starting_node(client)
-    client.print_status()
-    claim_first_edge(client)
+    print(game.get_status())
+    claim_first_edge(game)
 
 
 if __name__ == "__main__":
