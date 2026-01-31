@@ -50,15 +50,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def register_if_needed(session: Session, client: GameClient | None, args: argparse.Namespace) -> GameClient:
-    return session.ensure_registered(
-        client,
-        player_id=args.player_id,
-        player_name=args.player_name,
-        location=args.location,
-    )
-
-
 def ensure_starting_node(client: GameClient, starting_node: str | None) -> None:
     status = client.get_status()
     if status.get("starting_node"):
@@ -108,9 +99,12 @@ def claim_first_edge(client: GameClient, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
-    session = Session()
-    client = session.load()
-    client = register_if_needed(session, client, args)
+    session = Session(
+        player_id=args.player_id,
+        player_name=args.player_name,
+        location=args.location,
+    )
+    client = session.client
 
     ensure_starting_node(client, args.starting_node)
     client.print_status()

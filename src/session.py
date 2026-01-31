@@ -9,14 +9,37 @@ from client import GameClient
 class Session:
     """Manage session persistence and registration for the game client."""
 
-    def __init__(self, session_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        session_path: Path | None = None,
+        player_id: str | None = None,
+        player_name: str | None = None,
+        location: str = "remote",
+    ) -> None:
         self.session_path = session_path or Path("session.json")
         self._data: dict[str, str] = {}
+        self.client = self._bootstrap(player_id, player_name, location)
 
     def _default_base_url(self) -> str:
         return GameClient().base_url
 
-    def load(self) -> GameClient | None:
+    def _bootstrap(
+        self,
+        player_id: str | None,
+        player_name: str | None,
+        location: str,
+    ) -> GameClient:
+        client = self._load_client()
+        if client:
+            return client
+
+        if not player_id:
+            player_id = input("Enter your player ID: ").strip()
+        if not player_name:
+            player_name = input("Enter your player name: ").strip()
+        return self._register(player_id, player_name, location)
+
+    def _load_client(self) -> GameClient | None:
         if not self.session_path.exists():
             return None
 
@@ -34,9 +57,11 @@ class Session:
                 f"Budget: {status.get('budget', 0)}"
             )
             return client
+
+        print("Saved session could not be resumed. Registering again.")
         return None
 
-    def save(self, client: GameClient) -> None:
+    def _save(self, client: GameClient) -> None:
         if client.api_token:
             self.session_path.write_text(
                 json.dumps(
@@ -50,7 +75,7 @@ class Session:
             )
             print("Session saved.")
 
-    def register(self, player_id: str, player_name: str, location: str) -> GameClient:
+    def _register(self, player_id: str, player_name: str, location: str) -> GameClient:
         base_url = self._data.get("base_url", self._default_base_url())
         client = GameClient(base_url=base_url)
         result = client.register(player_id, player_name, location=location)
@@ -63,17 +88,6 @@ class Session:
                     f"  - {candidate['node_id']}: {candidate['utility_qubits']} qubits, "
                     f"+{candidate['bonus_bell_pairs']} bonus"
                 )
-            self.save(client)
+            self._save(client)
             return client
         raise SystemExit(f"Registration failed: {result.get('error', {}).get('message')}")
-
-    def ensure_registered(self, client: GameClient | None, player_id: str | None, player_name: str | None, location: str) -> GameClient:
-        if client and client.api_token:
-            print(f"Already registered as {client.player_id}")
-            return client
-
-        if not player_id or not player_name:
-            raise SystemExit(
-                "Missing player information. Provide --player-id and --player-name to register."
-            )
-        return self.register(player_id, player_name, location)
