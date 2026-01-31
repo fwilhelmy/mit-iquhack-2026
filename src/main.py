@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from circuit_runner import load_distillation_circuit
+from game import Game
 from session import Session
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -62,8 +63,8 @@ def ensure_starting_node(client: GameClient, starting_node: str | None) -> None:
     print(result)
 
 
-def claim_first_edge(client: GameClient, args: argparse.Namespace) -> None:
-    claimable = client.get_claimable_edges()
+def claim_first_edge(game: Game, args: argparse.Namespace) -> None:
+    claimable = game.get_claimable_edges()
     if not claimable:
         print("No claimable edges available yet.")
         return
@@ -82,7 +83,7 @@ def claim_first_edge(client: GameClient, args: argparse.Namespace) -> None:
         f"with {args.num_bell_pairs} Bell pairs..."
     )
 
-    result = client.claim_edge(
+    result = game.client.claim_edge(
         edge_id, circuit, args.flag_bit, num_bell_pairs=args.num_bell_pairs
     )
     if result.get("ok"):
@@ -105,10 +106,11 @@ def main() -> None:
         location=args.location,
     )
     client = session.client
+    game = Game(client)
 
     ensure_starting_node(client, args.starting_node)
-    print(client.get_status())
-    claim_first_edge(client, args)
+    print(game.get_status())
+    claim_first_edge(game, args)
 
 
 if __name__ == "__main__":
