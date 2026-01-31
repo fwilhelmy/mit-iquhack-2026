@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from circuit_runner import load_distillation_circuit
+from circuits import DistillationCircuit
 from game import Game
 from session import Session
 
@@ -58,12 +58,12 @@ def ensure_starting_node(client: GameClient) -> None:
 
 
 def claim_first_edge(
-    client: GameClient,
+    game: Game,
     circuit_path: Path | None = None,
     num_bell_pairs: int = DEFAULT_NUM_BELL_PAIRS,
     flag_bit: int = DEFAULT_FLAG_BIT,
 ) -> None:
-    claimable = client.get_claimable_edges()
+    claimable = game.get_claimable_edges()
     if not claimable:
         print("No claimable edges available yet.")
         return
@@ -74,15 +74,17 @@ def claim_first_edge(
     target = claimable_sorted[0]
     edge_id = tuple(target["edge_id"])
 
-    circuit = load_distillation_circuit(circuit_path, num_bell_pairs=num_bell_pairs)
+    circuit = DistillationCircuit(
+        num_bell_pairs=num_bell_pairs,
+        flag_bit=flag_bit,
+        circuit_path=circuit_path,
+    )
     print(
         f"Claiming {edge_id} (threshold: {target['base_threshold']:.3f}) "
         f"with {num_bell_pairs} Bell pairs..."
     )
 
-    result = game.client.claim_edge(
-        edge_id, circuit, flag_bit, num_bell_pairs=num_bell_pairs
-
+    result = game.claim_edge(edge_id, circuit)
     if result.get("ok"):
         data = result["data"]
         print(f"Success: {data.get('success')}")
@@ -101,7 +103,7 @@ def main() -> None:
     game = Game(client)
 
     ensure_starting_node(client)
-    print(game.get_status())
+    game.print_status()
     claim_first_edge(game)
 
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from client import GameClient
+from circuits import BaseCircuit
+from visualization import GraphTool
 
 GraphFrames = Dict[str, pd.DataFrame]
 
@@ -51,6 +53,26 @@ class Game:
             if (n1 in owned) != (n2 in owned):
                 claimable.append(edge)
         return claimable
+
+    def claim_edge(
+        self,
+        edge_id: Tuple[str, str],
+        circuit: BaseCircuit,
+        num_bell_pairs: int | None = None,
+        flag_bit: int | None = None,
+    ) -> Dict[str, Any]:
+        """Claim an edge using a circuit instance."""
+        resolved_pairs = num_bell_pairs if num_bell_pairs is not None else circuit.num_bell_pairs
+        resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
+        return self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+
+    def get_graph_tool(self, force: bool = False) -> GraphTool:
+        """Return a GraphTool instance built from the cached graph."""
+        return GraphTool(self.get_graph_raw(force=force))
+
+    def get_neighbors(self, node_id: str, force: bool = False) -> List[str]:
+        """Get neighboring nodes for a given node ID."""
+        return self.get_graph_tool(force=force).get_neighbors(node_id)
 
     def get_node_info(self, node_id: str) -> Optional[Dict[str, Any]]:
         """Get information about a specific node."""
