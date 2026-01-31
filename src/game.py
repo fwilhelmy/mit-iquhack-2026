@@ -6,7 +6,7 @@ import pandas as pd
 
 from client import GameClient
 from circuits import BaseCircuit
-from visualization import GraphTool
+from utils import visualization
 
 GraphFrames = Dict[str, pd.DataFrame]
 
@@ -75,11 +75,11 @@ class Game:
         resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
         mode = capture_mode.lower()
         if mode == "sim":
-            from simulation import simulate_capture
+            from utils import simulation
 
             edge_info = self.get_edge_info(edge_id[0], edge_id[1])
             threshold = edge_info.get("base_threshold") if edge_info else None
-            return simulate_capture(
+            return simulation.simulate_capture(
                 edge_id=edge_id,
                 circuit=circuit.circuit,
                 num_bell_pairs=resolved_pairs,
@@ -96,9 +96,9 @@ class Game:
             },
         }
 
-    def get_graph_tool(self, force: bool = False) -> GraphTool:
+    def get_graph_tool(self, force: bool = False) -> visualization.GraphTool:
         """Return a GraphTool instance built from the cached graph."""
-        return GraphTool(self.get_graph_raw(force=force))
+        return visualization.GraphTool(self.get_graph_raw(force=force))
 
     def get_neighbors(self, node_id: str, force: bool = False) -> List[str]:
         """Get neighboring nodes for a given node ID."""
