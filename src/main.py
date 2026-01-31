@@ -120,7 +120,6 @@ def claim_next_edge_with_strategy(
 
 
 def main() -> None:
-    args = parse_args()
     session = Session()
     client = session.client
     game = Game(client)
