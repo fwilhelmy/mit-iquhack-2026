@@ -4,10 +4,10 @@ import sys
 import time
 from pathlib import Path
 
-from circuits import BBPSSW
 from game import Game
 from session import Session
 from strategy import BaseStrategy, DummyStrategy
+from circuits import BaseCircuit, BBPSSW
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
@@ -15,11 +15,9 @@ sys.path.insert(0, str(CHALLENGE_DIR))
 
 from client import GameClient  # noqa: E402
 
-
 DEFAULT_NUM_BELL_PAIRS = 2
 DEFAULT_FLAG_BIT = 0
 DEFAULT_LOOP_DELAY_SECONDS = 3.0
-
 
 def ensure_starting_node(client: GameClient) -> None:
     status = client.get_status()
@@ -63,16 +61,11 @@ def ensure_starting_node(client: GameClient) -> None:
 def claim_next_edge_with_strategy(
     game: Game,
     strategy: BaseStrategy,
-    circuit_path: Path | None = None,
+    circuit: BaseCircuit,
     num_bell_pairs: int = DEFAULT_NUM_BELL_PAIRS,
     flag_bit: int = DEFAULT_FLAG_BIT,
 ) -> bool:
     """Attempt to claim a single edge using a strategy."""
-    circuit = BBPSSW(
-        num_bell_pairs=num_bell_pairs,
-        flag_bit=flag_bit,
-        circuit_path=circuit_path,
-    )
     claimable = game.get_claimable_edges()
     if not claimable:
         print("No claimable edges available yet.")
@@ -89,7 +82,7 @@ def claim_next_edge_with_strategy(
         f"with {num_bell_pairs} Bell pairs..."
     )
 
-    result = game.claim_edge(edge_id, circuit)
+    result = game.claim_edge(edge_id, circuit, num_bell_pairs, flag_bit, capture_mode="real")
     if result.get("ok"):
         data = result["data"]
         print(f"Success: {data.get('success')}")
@@ -112,13 +105,17 @@ def main() -> None:
     ensure_starting_node(client)
     game.print_status()
     strategy = DummyStrategy()
+    circuit = BBPSSW(
+        num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
+        flag_bit=DEFAULT_FLAG_BIT,
+    )
     print(
         "Starting auto-claim loop. "
         f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
     )
     try:
         while True:
-            claim_next_edge_with_strategy(game, strategy)
+            claim_next_edge_with_strategy(game, strategy=strategy, circuit=circuit)
             time.sleep(DEFAULT_LOOP_DELAY_SECONDS)
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
