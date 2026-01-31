@@ -1,3 +1,9 @@
+.mypy_cache/
+.vscode/
+__pycache__/
+*venv*/
+.iquhack_profile.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
