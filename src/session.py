@@ -75,6 +75,42 @@ class Session:
             )
             print("Session saved.")
 
+    def _prompt_starting_node(
+        self,
+        client: GameClient,
+        candidates: list[dict[str, str | int]],
+    ) -> None:
+        if not candidates:
+            print("No starting node candidates available.")
+            return
+
+        print("Select a starting node from your registration candidates:")
+        candidate_ids: list[str] = []
+        for index, candidate in enumerate(candidates, start=1):
+            node_id = str(candidate.get("node_id", "unknown"))
+            candidate_ids.append(node_id)
+            print(
+                f"  {index}. {node_id}: {candidate.get('utility_qubits', 0)} qubits, "
+                f"+{candidate.get('bonus_bell_pairs', 0)} bonus"
+            )
+
+        selection = input("Enter a node ID or the number from the list: ").strip()
+        if not selection:
+            print("No selection made. Skipping starting node selection.")
+            return
+
+        starting_node = selection
+        if selection.isdigit():
+            index = int(selection)
+            if 1 <= index <= len(candidate_ids):
+                starting_node = candidate_ids[index - 1]
+            else:
+                print("Invalid selection. Skipping starting node selection.")
+                return
+
+        result = client.select_starting_node(starting_node)
+        print(result)
+
     def _register(self, player_id: str, player_name: str, location: str) -> GameClient:
         base_url = self._data.get("base_url", self._default_base_url())
         client = GameClient(base_url=base_url)
@@ -89,5 +125,15 @@ class Session:
                     f"+{candidate['bonus_bell_pairs']} bonus"
                 )
             self._save(client)
+            self._prompt_starting_node(client, candidates)
             return client
         raise SystemExit(f"Registration failed: {result.get('error', {}).get('message')}")
+
+    def reset(self) -> None:
+        result = self.client.restart()
+        if not result.get("ok"):
+            raise SystemExit(f"Reset failed: {result.get('error', {}).get('message')}")
+
+        status = self.client.get_status()
+        candidates = status.get("starting_candidates") or []
+        self._prompt_starting_node(self.client, candidates)
