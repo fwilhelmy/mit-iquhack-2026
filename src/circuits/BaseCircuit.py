@@ -10,6 +10,7 @@ class BaseCircuit(ABC):
     """Base class for circuits used to claim edges in the game."""
 
     min_bell_pairs = 1
+    max_bell_pairs = 8
 
     def __init__(
         self,
@@ -17,6 +18,14 @@ class BaseCircuit(ABC):
         flag_bit: int = 0,
         circuit_path: Path | None = None,
     ) -> None:
+        if num_bell_pairs < self.min_bell_pairs:
+            raise ValueError(
+                f"num_bell_pairs must be >= {self.min_bell_pairs} for {self.__class__.__name__}."
+            )
+        if num_bell_pairs > self.max_bell_pairs:
+            raise ValueError(
+                f"num_bell_pairs must be <= {self.max_bell_pairs} for {self.__class__.__name__}."
+            )
         self.num_bell_pairs = num_bell_pairs
         self.flag_bit = flag_bit
         self.circuit_path = circuit_path
