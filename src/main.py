@@ -81,7 +81,7 @@ def claim_first_edge(
     )
 
     result = game.client.claim_edge(
-        edge_id, circuit, flag_bit, num_bell_pairs=num_bell_pairs
+        edge_id, circuit, flag_bit, num_bell_pairs=num_bell_pairs)
 
     if result.get("ok"):
         data = result["data"]
@@ -101,7 +101,7 @@ def main() -> None:
     game = Game(client)
 
     ensure_starting_node(client)
-    print(game.get_status())
+    game.print_status()
     claim_first_edge(game)
 
 
