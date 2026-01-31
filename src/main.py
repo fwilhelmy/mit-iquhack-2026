@@ -62,7 +62,6 @@ def claim_next_edge_with_strategy(
     game: Game,
     strategy: BaseStrategy,
     circuit: BaseCircuit,
-    num_bell_pairs: int = DEFAULT_NUM_BELL_PAIRS,
     flag_bit: int = DEFAULT_FLAG_BIT,
 ) -> bool:
     """Attempt to claim a single edge using a strategy."""
@@ -75,6 +74,17 @@ def claim_next_edge_with_strategy(
     if not target:
         print("Strategy did not select an edge.")
         return False
+
+    num_bell_pairs = strategy.choose_num_bell_pairs(
+        target,
+        min_pairs=circuit.min_bell_pairs,
+    )
+    if num_bell_pairs != circuit.num_bell_pairs:
+        circuit = circuit.__class__(
+            num_bell_pairs=num_bell_pairs,
+            flag_bit=circuit.flag_bit,
+            circuit_path=circuit.circuit_path,
+        )
 
     edge_id = tuple(target["edge_id"])
     print(
