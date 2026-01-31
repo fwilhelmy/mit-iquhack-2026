@@ -1,51 +1,17 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 from circuit_runner import load_distillation_circuit
+from session import Session
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
 sys.path.insert(0, str(CHALLENGE_DIR))
 
 from client import GameClient  # noqa: E402
-
-SESSION_FILE = Path("session.json")
-
-
-def save_session(client: GameClient) -> None:
-    if client.api_token:
-        SESSION_FILE.write_text(
-            json.dumps(
-                {
-                    "api_token": client.api_token,
-                    "player_id": client.player_id,
-                    "name": client.name,
-                }
-            )
-        )
-        print("Session saved.")
-
-
-def load_session() -> GameClient | None:
-    if not SESSION_FILE.exists():
-        return None
-    data = json.loads(SESSION_FILE.read_text())
-    client = GameClient(api_token=data.get("api_token"))
-    client.player_id = data.get("player_id")
-    client.name = data.get("name")
-    status = client.get_status()
-    if status:
-        print(
-            "Resumed: "
-            f"{client.player_id} | Score: {status.get('score', 0)} | "
-            f"Budget: {status.get('budget', 0)}"
-        )
-        return client
-    return None
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,32 +48,6 @@ def parse_args() -> argparse.Namespace:
         help="Classical bit index for post-selection (flag=0 is success).",
     )
     return parser.parse_args()
-
-
-def register_if_needed(client: GameClient, args: argparse.Namespace) -> GameClient:
-    if client and client.api_token:
-        print(f"Already registered as {client.player_id}")
-        return client
-
-    if not args.player_id or not args.player_name:
-        raise SystemExit(
-            "Missing player information. Provide --player-id and --player-name to register."
-        )
-
-    client = GameClient()
-    result = client.register(args.player_id, args.player_name, location=args.location)
-    if result.get("ok"):
-        print(f"Registered! Token: {client.api_token[:20]}...")
-        candidates = result["data"].get("starting_candidates", [])
-        print(f"Starting candidates ({len(candidates)}):")
-        for candidate in candidates:
-            print(
-                f"  - {candidate['node_id']}: {candidate['utility_qubits']} qubits, "
-                f"+{candidate['bonus_bell_pairs']} bonus"
-            )
-        save_session(client)
-        return client
-    raise SystemExit(f"Registration failed: {result.get('error', {}).get('message')}")
 
 
 def ensure_starting_node(client: GameClient, starting_node: str | None) -> None:
@@ -159,8 +99,12 @@ def claim_first_edge(client: GameClient, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
-    client = load_session()
-    client = register_if_needed(client, args)
+    session = Session(
+        player_id=args.player_id,
+        player_name=args.player_name,
+        location=args.location,
+    )
+    client = session.client
 
     ensure_starting_node(client, args.starting_node)
     client.print_status()
