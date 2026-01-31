@@ -7,7 +7,7 @@ from pathlib import Path
 from game import Game
 from session import Session
 from strategy import BaseStrategy, DummyStrategy
-from circuits import BaseCircuit, BBPSSW
+from circuits import BaseCircuit, BBPSSW, AaronCircuit
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
@@ -105,7 +105,7 @@ def main() -> None:
     ensure_starting_node(client)
     game.print_status()
     strategy = DummyStrategy()
-    circuit = BBPSSW(
+    circuit = AaronCircuit(
         num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
         flag_bit=DEFAULT_FLAG_BIT,
     )
