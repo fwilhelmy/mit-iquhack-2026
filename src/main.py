@@ -107,7 +107,7 @@ def main() -> None:
     client = session.client
 
     ensure_starting_node(client, args.starting_node)
-    client.print_status()
+    print(client.get_status())
     claim_first_edge(client, args)
 
 
