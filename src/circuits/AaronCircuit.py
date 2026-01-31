@@ -8,6 +8,9 @@ from circuits.BaseCircuit import BaseCircuit
 class AaronCircuit(BaseCircuit):
     """Two-pair recurrence (BBPSSW/DEJMPS-style) distillation circuit."""
 
+    min_bell_pairs = 2
+    max_bell_pairs = 2
+
     def build_circuit(self) -> QuantumCircuit:
         qc = QuantumCircuit(4, 3)
         
