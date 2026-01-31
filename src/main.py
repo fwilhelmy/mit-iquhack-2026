@@ -90,6 +90,7 @@ def claim_next_edge_with_strategy(
     num_bell_pairs = strategy.choose_num_bell_pairs(
         target,
         min_pairs=circuit.min_bell_pairs,
+        max_pairs=circuit.max_bell_pairs,
     )
     if num_bell_pairs != circuit.num_bell_pairs:
         circuit = circuit.__class__(

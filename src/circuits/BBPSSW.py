@@ -9,6 +9,7 @@ class BBPSSW(BaseCircuit):
     """Two-pair recurrence (BBPSSW/DEJMPS-style) distillation circuit."""
 
     min_bell_pairs = 2
+    max_bell_pairs = 8
 
     def build_circuit(self) -> QuantumCircuit:
         if self.num_bell_pairs < 2:
