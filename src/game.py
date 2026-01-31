@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from client import GameClient
+from circuits import BaseCircuit
+from visualization import GraphTool
 
 GraphFrames = Dict[str, pd.DataFrame]
 
@@ -51,6 +53,56 @@ class Game:
             if (n1 in owned) != (n2 in owned):
                 claimable.append(edge)
         return claimable
+
+    def claim_edge(
+        self,
+        edge_id: Tuple[str, str],
+        circuit: BaseCircuit,
+        num_bell_pairs: int | None = None,
+        flag_bit: int | None = None,
+        capture_mode: str = "real",
+    ) -> Dict[str, Any]:
+        """Claim an edge using a circuit instance.
+
+        Args:
+            edge_id: Tuple of (node_a, node_b)
+            circuit: Circuit instance used for distillation.
+            num_bell_pairs: Override for the number of Bell pairs to request.
+            flag_bit: Override for the flag bit index used for post-selection.
+            capture_mode: "real" to post to the API, "sim" to simulate locally.
+        """
+        resolved_pairs = num_bell_pairs if num_bell_pairs is not None else circuit.num_bell_pairs
+        resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
+        mode = capture_mode.lower()
+        if mode == "sim":
+            from simulation import simulate_capture
+
+            edge_info = self.get_edge_info(edge_id[0], edge_id[1])
+            threshold = edge_info.get("base_threshold") if edge_info else None
+            return simulate_capture(
+                edge_id=edge_id,
+                circuit=circuit.circuit,
+                num_bell_pairs=resolved_pairs,
+                flag_bit=resolved_flag,
+                threshold=threshold,
+            )
+        if mode == "real":
+            return self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+        return {
+            "ok": False,
+            "error": {
+                "code": "INVALID_CAPTURE_MODE",
+                "message": f"Unknown capture mode: {capture_mode}",
+            },
+        }
+
+    def get_graph_tool(self, force: bool = False) -> GraphTool:
+        """Return a GraphTool instance built from the cached graph."""
+        return GraphTool(self.get_graph_raw(force=force))
+
+    def get_neighbors(self, node_id: str, force: bool = False) -> List[str]:
+        """Get neighboring nodes for a given node ID."""
+        return self.get_graph_tool(force=force).get_neighbors(node_id)
 
     def get_node_info(self, node_id: str) -> Optional[Dict[str, Any]]:
         """Get information about a specific node."""
