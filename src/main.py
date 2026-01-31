@@ -6,7 +6,7 @@ from pathlib import Path
 
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy
+from strategy import BaseStrategy, GreedyStrategy
 from circuits import BaseCircuit, BBPSSW
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -114,7 +114,7 @@ def main() -> None:
 
     ensure_starting_node(client)
     game.print_status()
-    strategy = DummyStrategy()
+    strategy = GreedyStrategy()
     circuit = BBPSSW(
         num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
         flag_bit=DEFAULT_FLAG_BIT,
