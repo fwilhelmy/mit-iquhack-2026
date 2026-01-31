@@ -1,0 +1,19 @@
+Main Account:
+    PLAYER_ID = "kim0510"
+    PLAYER_NAME = "aaron kim"
+    Starting Nodes = "
+        Hyderabad, India: 4 qubits, +2 bonus
+        Vilnius, Lithuania: 2 qubits, +1 bonus
+        Brisbane, Australia: 3 qubits, +2 bonus
+        Guangzhou, China: 5 qubits, +2 bonus
+    Current Choice = Guangzhou, China
+
+Exploration Account:
+    PLAYER_ID = "fwil1995"
+    PLAYER_NAME = "Felix W"
+    Starting Nodes =
+      - Lund, Sweden: 1 qubits, +3 bonus
+        - Mumbai, India: 5 qubits, +2 bonus
+        - Osaka, Japan: 4 qubits, +2 bonus
+        - St. Petersburg, Russia: 4 qubits, +2 bonus\
+    Current Choice = Osaka, Japan
