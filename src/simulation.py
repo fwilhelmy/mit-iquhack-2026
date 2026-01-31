@@ -9,7 +9,7 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector, partial_trace, state_fidelity
 
-from circuit_runner import load_distillation_circuit
+from circuits import DistillationCircuit
 
 
 def _build_initial_state(num_bell_pairs: int) -> Statevector:
@@ -124,7 +124,12 @@ def main() -> None:
     parser.add_argument("--threshold", type=float, default=None)
     args = parser.parse_args()
 
-    circuit = load_distillation_circuit(args.circuit_path, num_bell_pairs=args.num_bell_pairs)
+    circuit_builder = DistillationCircuit(
+        num_bell_pairs=args.num_bell_pairs,
+        circuit_path=args.circuit_path,
+    )
+    circuit = circuit_builder.circuit
+    print(circuit.draw(output="text"))
     result = simulate_capture(
         edge_id=(args.edge[0], args.edge[1]),
         circuit=circuit,
