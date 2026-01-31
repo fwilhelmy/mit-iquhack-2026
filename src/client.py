@@ -1,18 +1,11 @@
-"""
-Refactored GameClient - Player interface for the quantum networking game server.
-"""
+"""Refactored GameClient - Player interface for the quantum networking game server."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-
-import pandas as pd
 import requests
 from qiskit import QuantumCircuit, qasm3
-
-
-GraphFrames = Dict[str, pd.DataFrame]
 
 
 @dataclass
@@ -33,8 +26,6 @@ class GameClient:
         self.api_token = api_token
         self.player_id: Optional[str] = None
         self.name: Optional[str] = None
-        self._cached_graph: Optional[Dict[str, Any]] = None
-        self._cached_graph_frames: Optional[GraphFrames] = None
 
     def _headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -124,11 +115,6 @@ class GameClient:
         """Get the quantum network graph structure as raw JSON."""
         return self._get("/v1/graph")
 
-    def get_graph(self) -> GraphFrames:
-        """Get the quantum network graph structure as pandas DataFrames."""
-        graph = self.get_graph_raw()
-        return self._to_graph_frames(graph)
-
     def get_leaderboard(self) -> List[Dict[str, Any]]:
         """Get the current leaderboard."""
         return self._get("/v1/leaderboard")
@@ -164,88 +150,3 @@ class GameClient:
             "flag_bit": int(flag_bit),
         }
         return self._post("/v1/claim_edge", payload)
-
-    # ---- Convenience Methods ----
-
-    def _to_graph_frames(self, graph: Dict[str, Any]) -> GraphFrames:
-        nodes = pd.DataFrame(graph.get("nodes", []))
-        edges = pd.DataFrame(graph.get("edges", []))
-        if not edges.empty and "edge_id" in edges.columns:
-            edges = edges.copy()
-            edges[["node_a", "node_b"]] = pd.DataFrame(edges["edge_id"].tolist(), index=edges.index)
-        return {"nodes": nodes, "edges": edges}
-
-    def get_cached_graph(self, force: bool = False) -> Dict[str, Any]:
-        """Get graph with caching (graph doesn't change during game)."""
-        if force or self._cached_graph is None:
-            self._cached_graph = self.get_graph_raw()
-        return self._cached_graph
-
-    def get_cached_graph_frames(self, force: bool = False) -> GraphFrames:
-        """Get cached graph as pandas DataFrames."""
-        if force or self._cached_graph_frames is None:
-            self._cached_graph_frames = self._to_graph_frames(self.get_cached_graph(force=force))
-        return self._cached_graph_frames
-
-    def get_claimable_edges(self) -> List[Dict[str, Any]]:
-        """Get edges adjacent to owned nodes that can be claimed."""
-        status = self.get_status()
-        owned = set(status.get("owned_nodes", []))
-        if not owned:
-            return []
-
-        graph = self.get_cached_graph()
-        claimable = []
-        for edge in graph.get("edges", []):
-            n1, n2 = edge["edge_id"]
-            if (n1 in owned) != (n2 in owned):
-                claimable.append(edge)
-        return claimable
-
-    def get_node_info(self, node_id: str) -> Optional[Dict[str, Any]]:
-        """Get information about a specific node."""
-        nodes = self.get_cached_graph_frames().get("nodes", pd.DataFrame())
-        if nodes.empty or "node_id" not in nodes.columns:
-            return None
-        match = nodes.loc[nodes["node_id"] == node_id]
-        if match.empty:
-            return None
-        return match.iloc[0].to_dict()
-
-    def get_edge_info(self, node_a: str, node_b: str) -> Optional[Dict[str, Any]]:
-        """Get information about a specific edge."""
-        edges = self.get_cached_graph_frames().get("edges", pd.DataFrame())
-        if edges.empty or "edge_id" not in edges.columns:
-            return None
-        edge_id = tuple(sorted([node_a, node_b]))
-        edge_ids = edges["edge_id"].apply(lambda value: tuple(sorted(value)))
-        match = edges.loc[edge_ids == edge_id]
-        if match.empty:
-            return None
-        return match.iloc[0].to_dict()
-
-    def get_status_summary(self) -> Dict[str, Any]:
-        """Return a summarized view of player status."""
-        status = self.get_status()
-        if not status:
-            return {"ok": False, "error": {"code": "NO_STATUS", "message": "Not registered or no status available."}}
-
-        owned_nodes = status.get("owned_nodes", [])
-        owned_edges = status.get("owned_edges", [])
-        claimable = self.get_claimable_edges()
-
-        return {
-            "ok": True,
-            "player_id": status.get("player_id", "Unknown"),
-            "name": status.get("name", ""),
-            "score": status.get("score", 0),
-            "budget": status.get("budget", 0),
-            "is_active": status.get("is_active", False),
-            "starting_node": status.get("starting_node", "Not selected"),
-            "owned_nodes": owned_nodes,
-            "owned_edges": owned_edges,
-            "owned_nodes_count": len(owned_nodes),
-            "owned_edges_count": len(owned_edges),
-            "claimable_edges": claimable,
-            "claimable_edges_count": len(claimable),
-        }
