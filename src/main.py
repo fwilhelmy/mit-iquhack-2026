@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from circuits import DistillationCircuit
+from circuits import BBPSSW
 from game import Game
 from session import Session
 
@@ -74,7 +74,7 @@ def claim_first_edge(
     target = claimable_sorted[0]
     edge_id = tuple(target["edge_id"])
 
-    circuit = DistillationCircuit(
+    circuit = BBPSSW(
         num_bell_pairs=num_bell_pairs,
         flag_bit=flag_bit,
         circuit_path=circuit_path,
