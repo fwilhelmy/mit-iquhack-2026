@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 from circuits import BBPSSW
 from game import Game
 from session import Session
+from strategy import BaseStrategy, DummyStrategy
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
@@ -16,6 +18,7 @@ from client import GameClient  # noqa: E402
 
 DEFAULT_NUM_BELL_PAIRS = 2
 DEFAULT_FLAG_BIT = 0
+DEFAULT_LOOP_DELAY_SECONDS = 3.0
 
 
 def ensure_starting_node(client: GameClient) -> None:
@@ -57,28 +60,30 @@ def ensure_starting_node(client: GameClient) -> None:
     print(result)
 
 
-def claim_first_edge(
+def claim_next_edge_with_strategy(
     game: Game,
+    strategy: BaseStrategy,
     circuit_path: Path | None = None,
     num_bell_pairs: int = DEFAULT_NUM_BELL_PAIRS,
     flag_bit: int = DEFAULT_FLAG_BIT,
-) -> None:
-    claimable = game.get_claimable_edges()
-    if not claimable:
-        print("No claimable edges available yet.")
-        return
-
-    claimable_sorted = sorted(
-        claimable, key=lambda edge: (edge["difficulty_rating"], edge["base_threshold"])
-    )
-    target = claimable_sorted[0]
-    edge_id = tuple(target["edge_id"])
-
+) -> bool:
+    """Attempt to claim a single edge using a strategy."""
     circuit = BBPSSW(
         num_bell_pairs=num_bell_pairs,
         flag_bit=flag_bit,
         circuit_path=circuit_path,
     )
+    claimable = game.get_claimable_edges()
+    if not claimable:
+        print("No claimable edges available yet.")
+        return False
+
+    target = strategy.choose_edge(claimable)
+    if not target:
+        print("Strategy did not select an edge.")
+        return False
+
+    edge_id = tuple(target["edge_id"])
     print(
         f"Claiming {edge_id} (threshold: {target['base_threshold']:.3f}) "
         f"with {num_bell_pairs} Bell pairs..."
@@ -93,8 +98,10 @@ def claim_first_edge(
             f"(threshold: {data.get('threshold', 0):.4f})"
         )
         print(f"Success probability: {data.get('success_probability', 0):.4f}")
-    else:
-        print(f"Error: {result.get('error', {}).get('message')}")
+        return True
+
+    print(f"Error: {result.get('error', {}).get('message')}")
+    return False
 
 
 def main() -> None:
@@ -104,7 +111,17 @@ def main() -> None:
 
     ensure_starting_node(client)
     game.print_status()
-    claim_first_edge(game)
+    strategy = DummyStrategy()
+    print(
+        "Starting auto-claim loop. "
+        f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
+    )
+    try:
+        while True:
+            claim_next_edge_with_strategy(game, strategy)
+            time.sleep(DEFAULT_LOOP_DELAY_SECONDS)
+    except KeyboardInterrupt:
+        print("Auto-claim loop stopped.")
 
 
 if __name__ == "__main__":
