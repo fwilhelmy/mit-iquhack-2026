@@ -60,11 +60,41 @@ class Game:
         circuit: BaseCircuit,
         num_bell_pairs: int | None = None,
         flag_bit: int | None = None,
+        capture_mode: str = "real",
     ) -> Dict[str, Any]:
-        """Claim an edge using a circuit instance."""
+        """Claim an edge using a circuit instance.
+
+        Args:
+            edge_id: Tuple of (node_a, node_b)
+            circuit: Circuit instance used for distillation.
+            num_bell_pairs: Override for the number of Bell pairs to request.
+            flag_bit: Override for the flag bit index used for post-selection.
+            capture_mode: "real" to post to the API, "sim" to simulate locally.
+        """
         resolved_pairs = num_bell_pairs if num_bell_pairs is not None else circuit.num_bell_pairs
         resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
-        return self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+        mode = capture_mode.lower()
+        if mode == "sim":
+            from simulation import simulate_capture
+
+            edge_info = self.get_edge_info(edge_id[0], edge_id[1])
+            threshold = edge_info.get("base_threshold") if edge_info else None
+            return simulate_capture(
+                edge_id=edge_id,
+                circuit=circuit.circuit,
+                num_bell_pairs=resolved_pairs,
+                flag_bit=resolved_flag,
+                threshold=threshold,
+            )
+        if mode == "real":
+            return self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+        return {
+            "ok": False,
+            "error": {
+                "code": "INVALID_CAPTURE_MODE",
+                "message": f"Unknown capture mode: {capture_mode}",
+            },
+        }
 
     def get_graph_tool(self, force: bool = False) -> GraphTool:
         """Return a GraphTool instance built from the cached graph."""
