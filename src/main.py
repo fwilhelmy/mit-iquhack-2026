@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
 
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy
+from strategy import BaseStrategy, DummyStrategy, ManualStrategy
 from circuits import BaseCircuit, BBPSSW
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,17 @@ from client import GameClient  # noqa: E402
 DEFAULT_NUM_BELL_PAIRS = 2
 DEFAULT_FLAG_BIT = 0
 DEFAULT_LOOP_DELAY_SECONDS = 3.0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the IonQ challenge client.")
+    parser.add_argument(
+        "--strategy",
+        choices=("dummy", "manual"),
+        default="dummy",
+        help="Strategy to use when selecting the next edge.",
+    )
+    return parser.parse_args()
 
 def ensure_starting_node(client: GameClient) -> None:
     status = client.get_status()
@@ -108,13 +120,18 @@ def claim_next_edge_with_strategy(
 
 
 def main() -> None:
+    args = parse_args()
     session = Session()
     client = session.client
     game = Game(client)
 
     ensure_starting_node(client)
     game.print_status()
-    strategy = DummyStrategy()
+    strategy: BaseStrategy
+    if args.strategy == "manual":
+        strategy = ManualStrategy()
+    else:
+        strategy = DummyStrategy()
     circuit = BBPSSW(
         num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
         flag_bit=DEFAULT_FLAG_BIT,
