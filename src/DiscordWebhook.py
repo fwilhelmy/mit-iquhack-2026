@@ -5,7 +5,7 @@ from typing import Optional
 
 from discord_webhook import DiscordEmbed, DiscordWebhook
 
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1466510737009803420/SPhFts6q0B_fac2FYEdHrEzmFIRAkZcYvZmKFy8-FmlLUN7-p0AJGZqOMEwOHK8Uy6mP"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1466973035599757478/7wNca0ycOc0GDkEdacgLZbOQ9UOooJWYGbqWSzltggogvyZf43IhGYJpdP3RM7IRl2fn"
 
 def _resolve_webhook_url(webhook_url: Optional[str]) -> str:
     return (webhook_url or DISCORD_WEBHOOK_URL).strip()
