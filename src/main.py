@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -15,56 +14,56 @@ sys.path.insert(0, str(CHALLENGE_DIR))
 from client import GameClient  # noqa: E402
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run the IonQ challenge workflow with a distillation circuit.",
-    )
-    parser.add_argument("--player-id", help="Player ID used for registration.")
-    parser.add_argument("--player-name", help="Player name used for registration.")
-    parser.add_argument(
-        "--location",
-        default="remote",
-        choices=["remote", "in_person"],
-        help="Competition location (remote or in_person).",
-    )
-    parser.add_argument(
-        "--starting-node",
-        help="Node ID to select as a starting node if not already set.",
-    )
-    parser.add_argument(
-        "--circuit",
-        type=Path,
-        help="Optional path to a QASM3 circuit file.",
-    )
-    parser.add_argument(
-        "--num-bell-pairs",
-        type=int,
-        default=2,
-        help="Number of raw Bell pairs used in the distillation circuit.",
-    )
-    parser.add_argument(
-        "--flag-bit",
-        type=int,
-        default=0,
-        help="Classical bit index for post-selection (flag=0 is success).",
-    )
-    return parser.parse_args()
+DEFAULT_NUM_BELL_PAIRS = 2
+DEFAULT_FLAG_BIT = 0
 
 
-def ensure_starting_node(client: GameClient, starting_node: str | None) -> None:
+def ensure_starting_node(client: GameClient) -> None:
     status = client.get_status()
     if status.get("starting_node"):
         print(f"Starting node: {status['starting_node']}")
         return
-    if not starting_node:
+
+    candidates = status.get("starting_candidates") or []
+    if not candidates:
         print("Select a starting node from your registration candidates.")
         return
+
+    print("Select a starting node from your registration candidates:")
+    candidate_ids = []
+    for index, candidate in enumerate(candidates, start=1):
+        node_id = candidate.get("node_id", "unknown")
+        candidate_ids.append(node_id)
+        print(
+            f"  {index}. {node_id}: {candidate.get('utility_qubits', 0)} qubits, "
+            f"+{candidate.get('bonus_bell_pairs', 0)} bonus"
+        )
+
+    selection = input("Enter a node ID or the number from the list: ").strip()
+    if not selection:
+        print("No selection made. Skipping starting node selection.")
+        return
+
+    starting_node = selection
+    if selection.isdigit():
+        index = int(selection)
+        if 1 <= index <= len(candidate_ids):
+            starting_node = candidate_ids[index - 1]
+        else:
+            print("Invalid selection. Skipping starting node selection.")
+            return
+
     result = client.select_starting_node(starting_node)
     print(result)
 
 
-def claim_first_edge(game: Game, args: argparse.Namespace) -> None:
-    claimable = game.get_claimable_edges()
+def claim_first_edge(
+    client: GameClient,
+    circuit_path: Path | None = None,
+    num_bell_pairs: int = DEFAULT_NUM_BELL_PAIRS,
+    flag_bit: int = DEFAULT_FLAG_BIT,
+) -> None:
+    claimable = client.get_claimable_edges()
     if not claimable:
         print("No claimable edges available yet.")
         return
@@ -75,17 +74,15 @@ def claim_first_edge(game: Game, args: argparse.Namespace) -> None:
     target = claimable_sorted[0]
     edge_id = tuple(target["edge_id"])
 
-    circuit = load_distillation_circuit(
-        args.circuit, num_bell_pairs=args.num_bell_pairs
-    )
+    circuit = load_distillation_circuit(circuit_path, num_bell_pairs=num_bell_pairs)
     print(
         f"Claiming {edge_id} (threshold: {target['base_threshold']:.3f}) "
-        f"with {args.num_bell_pairs} Bell pairs..."
+        f"with {num_bell_pairs} Bell pairs..."
     )
 
     result = game.client.claim_edge(
-        edge_id, circuit, args.flag_bit, num_bell_pairs=args.num_bell_pairs
-    )
+        edge_id, circuit, flag_bit, num_bell_pairs=num_bell_pairs
+
     if result.get("ok"):
         data = result["data"]
         print(f"Success: {data.get('success')}")
@@ -99,18 +96,13 @@ def claim_first_edge(game: Game, args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    args = parse_args()
-    session = Session(
-        player_id=args.player_id,
-        player_name=args.player_name,
-        location=args.location,
-    )
+    session = Session()
     client = session.client
     game = Game(client)
 
-    ensure_starting_node(client, args.starting_node)
+    ensure_starting_node(client)
     print(game.get_status())
-    claim_first_edge(game, args)
+    claim_first_edge(game)
 
 
 if __name__ == "__main__":
