@@ -126,7 +126,7 @@ def main() -> None:
 
     ensure_starting_node(client)
     game.print_status()
-    strategy = GreedyStrategy()
+    strategy = ManualStrategy()
     circuit = AaronCircuit(
         num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
         flag_bit=DEFAULT_FLAG_BIT,
