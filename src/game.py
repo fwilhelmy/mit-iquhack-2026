@@ -6,7 +6,7 @@ import pandas as pd
 
 from client import GameClient
 from circuits import BaseCircuit
-from visualization import GraphTool
+from utils.visualization import GraphTool
 
 GraphFrames = Dict[str, pd.DataFrame]
 
@@ -75,7 +75,7 @@ class Game:
         resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
         mode = capture_mode.lower()
         if mode == "sim":
-            from simulation import simulate_capture
+            from utils.simulation import simulate_capture
 
             edge_info = self.get_edge_info(edge_id[0], edge_id[1])
             threshold = edge_info.get("base_threshold") if edge_info else None
