@@ -45,23 +45,3 @@ class BaseCircuit(ABC):
 
     def qasm(self) -> str:
         return qasm3.dumps(self.circuit)
-
-
-class DistillationCircuit(BaseCircuit):
-    """Default distillation circuit based on the provided template."""
-
-    def build_circuit(self) -> QuantumCircuit:
-        if self.num_bell_pairs < 1:
-            raise ValueError("num_bell_pairs must be at least 1.")
-
-        qubit_count = 2 * self.num_bell_pairs
-        qr = QuantumRegister(qubit_count, "q")
-        cr = ClassicalRegister(2, "c")
-        qc = QuantumCircuit(qr, cr)
-
-        # TODO: Fill in your distillation protocol.
-        # Qubit layout example for num_bell_pairs=2:
-        #   q0, q3: Ancilla pair (to be measured)
-        #   q1, q2: Data pair (output)
-
-        return qc

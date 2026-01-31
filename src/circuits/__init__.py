@@ -1,3 +1,3 @@
-from circuits.BaseCircuit import BaseCircuit, DistillationCircuit
+from circuits.BaseCircuit import BaseCircuit, BBPSSW
 
-__all__ = ["BaseCircuit", "DistillationCircuit"]
+__all__ = ["BaseCircuit", "BBPSSW"]
