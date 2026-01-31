@@ -47,6 +47,6 @@ class BaseStrategy(ABC):
         return max(min_pairs, min(max_pairs, recommended))
 
     @abstractmethod
-    def select_edge(self, edges: List[Edge]) -> Edge:
+    def select_edge(self, edges: List[Edge]) -> Optional[Edge]:
         """Select an edge from the pre-sorted list."""
         raise NotImplementedError
