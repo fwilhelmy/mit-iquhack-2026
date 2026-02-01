@@ -100,7 +100,7 @@ def claim_next_edge_with_strategy(
         max_attempts=max_attempts,
     )
     last_result = results.get("last_result", {})
-    # strategy.observe_claim_result(target, last_result)
+    strategy.observe_claim_result(target, last_result)
     attempt_records: List[Dict[str, Any]] = []
     for attempt_index, attempt_result in enumerate(results.get("results", []), start=1):
         record: Dict[str, Any] = {
@@ -136,22 +136,21 @@ def main() -> None:
     game = Game(client)
 
     ensure_starting_node(client)
-    # game.print_status()
-    # graph = game.get_graph_raw()
-    # status = client.get_status()
-    # base_strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
-    base_strategy = NaiveStrategy()
+    graph = game.get_graph_raw()
+    status = client.get_status()
+    base_strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    #base_strategy = NaiveStrategy()
     strategy = BlackListStrategy(base_strategy)
     print("Starting auto-claim loop.")
     all_attempts: List[Dict[str, Any]] = []
     try:
         while True:
-            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
             result, attempts, target_edge = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
                 circuit_cls=ShaneCircuit,
-                max_attempts=2,
+                max_attempts=3,
             )
             all_attempts.extend(attempts)
             if target_edge and (not result.get("ok") or not (result.get("data") or {}).get("success")):

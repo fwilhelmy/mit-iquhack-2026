@@ -59,9 +59,6 @@ class BlackListStrategy(BaseStrategy):
         return self.strategy.choose_edge(eligible)
 
     def _is_edge_allowed(self, edge: Edge) -> bool:
-        difficulty = int(edge.get("difficulty_rating", 0) or 0)
-        if difficulty > self.max_difficulty:
-            return False
         edge_id = self._normalize_edge_id(edge)
         if edge_id in self._blacklisted_edges:
             return False

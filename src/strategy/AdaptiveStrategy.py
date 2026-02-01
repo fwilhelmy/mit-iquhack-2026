@@ -338,5 +338,74 @@ class AdaptiveStrategy(BaseStrategy):
     def sort_edges(self, edges: List[Edge]) -> List[Edge]:
         return sorted(edges, key=self._edge_value)
 
+    # ----------------------------
+    # Debug / telemetry
+    # ----------------------------
+    def _edge_score_breakdown(self, edge: Edge) -> Dict[str, Any]:
+        node_a, node_b = edge.get("edge_id", ("", ""))
+        if not node_a or not node_b:
+            return {
+                "edge_id": (node_a, node_b),
+                "origin": "",
+                "new_node": "",
+                "new_score": 0.0,
+                "origin_score": 0.0,
+                "potential": 0.0,
+                "p_success": 0.0,
+                "total_score": float("-inf"),
+            }
+
+        a_owned = node_a in self.owned_nodes
+        b_owned = node_b in self.owned_nodes
+
+        if a_owned and not b_owned:
+            origin, new_node = node_a, node_b
+        elif b_owned and not a_owned:
+            origin, new_node = node_b, node_a
+        else:
+            origin, new_node = node_a, node_b
+
+        new_score = float(self.node_scores.get(new_node, 0.0))
+        origin_score = float(self.node_scores.get(origin, 0.0))
+        potential = float(self._two_hop_potential(new_node))
+        p_success = float(self._estimate_success_prob(edge))
+
+        total_score = (new_score + self.potential_weight * potential) * p_success + 0.01 * origin_score
+
+        return {
+            "edge_id": (node_a, node_b),
+            "origin": origin,
+            "new_node": new_node,
+            "new_score": new_score,
+            "origin_score": origin_score,
+            "potential": potential,
+            "p_success": p_success,
+            "total_score": total_score,
+        }
+
     def select_edge(self, edges: List[Edge]) -> Edge:
-        return edges[0]
+        # Sort as before (lowest key == best because _edge_value returns -total_score)
+        edges_sorted = self.sort_edges(edges)
+        selected = edges_sorted[0]
+
+        # Print selected edge + score
+        s = self._edge_score_breakdown(selected)
+        print(
+            "[AdaptiveStrategy] selected edge="
+            f"{s['edge_id']} origin={s['origin']} new_node={s['new_node']} "
+            f"total={s['total_score']:.6f} "
+            f"(new={s['new_score']:.4f}, pot={s['potential']:.4f}, "
+            f"p={s['p_success']:.4f}, origin={s['origin_score']:.4f})"
+        )
+
+        # OPTIONAL: print top-K candidates for debugging
+        K = min(5, len(edges_sorted))
+        for i in range(K):
+            d = self._edge_score_breakdown(edges_sorted[i])
+            print(
+                f"  cand[{i}] edge={d['edge_id']} new_node={d['new_node']} "
+                f"total={d['total_score']:.6f} p={d['p_success']:.4f} "
+                f"new={d['new_score']:.4f} pot={d['potential']:.4f}"
+            )
+
+        return selected
