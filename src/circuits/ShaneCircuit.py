@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+from typing import Any, Dict
+
 from qiskit.circuit.classical import expr
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+
+from circuits.BaseCircuit import BaseCircuit
 
 def measure_z_errors():
     """
@@ -73,6 +79,7 @@ def create_z():
 def shane_distillation_circuit_1():
     "Basically, the identity"
     qc = QuantumCircuit(2, 1)
+    return qc
 
 def shane_distillation_circuit_2(t): # THIS ONE
     """Example distillation circuit template for 2 Bell pairs."""
@@ -153,3 +160,48 @@ def distillation_circuit_6(t):
     qc.store(qc.clbits[18], false_condition)
 
     return qc
+
+
+class ShaneCircuit(BaseCircuit):
+    """Shane's distillation circuit family."""
+
+    _CIRCUIT_BUILDERS = {
+        1: shane_distillation_circuit_1,
+        2: shane_distillation_circuit_2,
+        4: shane_distillation_circuit_4,
+        6: distillation_circuit_6,
+    }
+
+    _FLAG_BITS = {
+        1: 0,
+        2: 2,
+        4: 10,
+        6: 18,
+    }
+
+    def __init__(self, bell_pairs: int = 2, distillation_type: str = "z") -> None:
+        super().__init__()
+        self.bell_pairs = bell_pairs
+        self.distillation_type = distillation_type
+
+    def build_circuit(self, edge: Dict[str, Any]) -> tuple[QuantumCircuit, int, int]:
+        bell_pairs = self.get_num_bell_pairs(edge)
+        try:
+            builder = self._CIRCUIT_BUILDERS[bell_pairs]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported bell pair count: {bell_pairs}") from exc
+        if bell_pairs == 1:
+            circuit = builder()
+        else:
+            circuit = builder(self.distillation_type)
+        flag_bit = self.get_flag_qubit(edge)
+        return circuit, flag_bit, bell_pairs
+
+    def get_num_bell_pairs(self, edge: Dict[str, Any]) -> int:
+        return self.bell_pairs
+
+    def get_flag_qubit(self, edge: Dict[str, Any]) -> int:
+        try:
+            return self._FLAG_BITS[self.bell_pairs]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported bell pair count: {self.bell_pairs}") from exc
