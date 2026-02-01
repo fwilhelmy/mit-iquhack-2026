@@ -59,8 +59,7 @@ class Game:
         self,
         edge_id: Tuple[str, str],
         circuit: BaseCircuit,
-        num_bell_pairs: int | None = None,
-        flag_bit: int | None = None,
+        edge_info: Dict[str, Any] | None = None,
         capture_mode: str = "real",
     ) -> Dict[str, Any]:
         """Claim an edge using a circuit instance.
@@ -68,21 +67,22 @@ class Game:
         Args:
             edge_id: Tuple of (node_a, node_b)
             circuit: Circuit instance used for distillation.
-            num_bell_pairs: Override for the number of Bell pairs to request.
-            flag_bit: Override for the flag bit index used for post-selection.
+            edge_info: Edge metadata used to configure circuit parameters.
             capture_mode: "real" to post to the API, "sim" to simulate locally.
         """
-        resolved_pairs = num_bell_pairs if num_bell_pairs is not None else circuit.num_bell_pairs
-        resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
+        resolved_edge = edge_info or self.get_edge_info(edge_id[0], edge_id[1])
+        if resolved_edge is None:
+            raise ValueError("Edge metadata is required to claim an edge.")
+        resolved_pairs = circuit.get_num_bell_pairs(resolved_edge)
+        resolved_flag = circuit.get_flag_qubit(resolved_edge)
         mode = capture_mode.lower()
         if mode == "sim":
             from utils import simulation
 
-            edge_info = self.get_edge_info(edge_id[0], edge_id[1])
-            threshold = edge_info.get("base_threshold") if edge_info else None
+            threshold = resolved_edge.get("base_threshold")
             return simulation.simulate_capture(
                 edge_id=edge_id,
-                circuit=circuit.circuit,
+                circuit=circuit.circuit_for_edge(resolved_edge),
                 num_bell_pairs=resolved_pairs,
                 flag_bit=resolved_flag,
                 threshold=threshold,
@@ -90,7 +90,12 @@ class Game:
         if mode == "real":
             pre_status = self.client.get_status()
             pre_owned_nodes = set(pre_status.get("owned_nodes", []))
-            result = self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+            result = self.client.claim_edge(
+                edge_id,
+                circuit.circuit_for_edge(resolved_edge),
+                resolved_flag,
+                resolved_pairs,
+            )
             if result.get("ok") and result.get("data", {}).get("success"):
                 post_status = self.client.get_status()
                 post_owned_nodes = set(post_status.get("owned_nodes", []))

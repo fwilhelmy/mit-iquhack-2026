@@ -16,10 +16,7 @@ sys.path.insert(0, str(CHALLENGE_DIR))
 
 from client import GameClient  # noqa: E402
 
-DEFAULT_NUM_BELL_PAIRS = 2
-DEFAULT_FLAG_BIT = 2
 DEFAULT_LOOP_DELAY_SECONDS = 3.0
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the IonQ challenge client.")
@@ -73,8 +70,8 @@ def ensure_starting_node(client: GameClient) -> None:
 def claim_next_edge_with_strategy(
     game: Game,
     strategy: BaseStrategy,
-    circuit: BaseCircuit,
-    flag_bit: int = DEFAULT_FLAG_BIT,
+    circuit_cls: type[BaseCircuit],
+    circuit_path: Path | None = None,
 ) -> Dict[str, Any]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
@@ -87,25 +84,16 @@ def claim_next_edge_with_strategy(
         print("Strategy did not select an edge.")
         return False
 
-    num_bell_pairs = strategy.choose_num_bell_pairs(
-        target,
-        min_pairs=circuit.min_bell_pairs,
-        max_pairs=circuit.max_bell_pairs,
-    )
-    if num_bell_pairs != circuit.num_bell_pairs:
-        circuit = circuit.__class__(
-            num_bell_pairs=num_bell_pairs,
-            flag_bit=circuit.flag_bit,
-            circuit_path=circuit.circuit_path,
-        )
+    circuit = circuit_cls(circuit_path=circuit_path)
+    circuit.validate_edge(target)
 
     edge_id = tuple(target["edge_id"])
     print(
         f"Claiming {edge_id} (threshold: {target['base_threshold']:.3f}) "
-        f"with {num_bell_pairs} Bell pairs..."
+        f"with {circuit.get_num_bell_pairs(target)} Bell pairs..."
     )
 
-    return game.claim_edge(edge_id, circuit, num_bell_pairs, flag_bit, capture_mode="real")
+    return game.claim_edge(edge_id, circuit, target, capture_mode="real")
 
 def main() -> None:
     session = Session()
@@ -115,17 +103,13 @@ def main() -> None:
     ensure_starting_node(client)
     game.print_status()
     strategy = ManualStrategy()
-    circuit = FirstCircuit(
-        num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
-        flag_bit=DEFAULT_FLAG_BIT,
-    )
     print(
         "Starting auto-claim loop. "
         f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
     )
     try:
         while True:
-            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit=circuit)
+            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=AaronCircuit)
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
