@@ -146,7 +146,7 @@ def main() -> None:
     all_attempts: List[Dict[str, Any]] = []
     try:
         while True:
-            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
             result, attempts, target_edge = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
@@ -172,14 +172,12 @@ def main() -> None:
                     threshold = data.get("threshold", 0)
                     status = client.get_status()
                     budget = status.get("budget", 0)
-                    session_id = status.get("session_id", "Unknown")
                     message = (
                         "```\n"
                         "Claim success\n"
                         f"Edge: {edge_name}\n"
                         f"Edge nodes: {edge_nodes_display}\n"
                         f"Player: {player_id}{f' ({name})' if name else ''}\n"
-                        f"Session:\n"
                         f"Score: {score}\n"
                         f"Budget: {budget}\n"
                         f"Fidelity: {fidelity:.4f} (threshold: {threshold:.4f})\n"
