@@ -215,7 +215,10 @@ class GraphTool:
         scores = []
         node_scores = NodeValueStrategy(self.graph_data).node_scores
 
-        for node_id, node in self.nodes.items():
+        for node in self.graph_data.get("nodes", []):
+            node_id = node.get("node_id")
+            if not node_id:
+                continue
             latitude = node.get("latitude")
             longitude = node.get("longitude")
             if latitude is None or longitude is None:
