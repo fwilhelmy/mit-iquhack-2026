@@ -90,7 +90,7 @@ def claim_next_edge_with_strategy(
         max_attempts=max_attempts,
     )
     last_result = results.get("last_result", {})
-    strategy.observe_claim_result(target, last_result)
+    # strategy.observe_claim_result(target, last_result)
     attempt_records: List[Dict[str, Any]] = []
     for attempt_index, attempt_result in enumerate(results.get("results", []), start=1):
         record: Dict[str, Any] = {
@@ -135,7 +135,7 @@ def main() -> None:
     all_attempts: List[Dict[str, Any]] = []
     try:
         while True:
-            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
             result, attempts = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,

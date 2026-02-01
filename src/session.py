@@ -80,10 +80,6 @@ class Session:
         client: GameClient,
         candidates: list[dict[str, str | int]],
     ) -> None:
-        if not candidates:
-            print("No starting node candidates available.")
-            return
-
         print("Select a starting node from your registration candidates:")
         candidate_ids: list[str] = []
         for index, candidate in enumerate(candidates, start=1):
