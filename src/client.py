@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import requests
 from qiskit import QuantumCircuit, qasm3
 
-from graph_types import GraphData
+from graphs import GraphData
 
 
 @dataclass

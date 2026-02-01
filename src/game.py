@@ -6,7 +6,7 @@ import pandas as pd
 
 from client import GameClient
 from circuits import BaseCircuit
-from graph_types import Edge, GraphData, Node
+from graphs import Edge, GraphData, Node
 from utils import discord, visualization
 
 GraphFrames = Dict[str, pd.DataFrame]
@@ -88,7 +88,7 @@ class Game:
                 threshold=threshold,
             )
         if mode == "real":
-            result = self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
+            result = self.client.claim_edge(edge_id, circuit.circuit_for_edge(resolved_edge), resolved_flag, resolved_pairs)
             return result
         return {
             "ok": False,

@@ -71,29 +71,13 @@ def ensure_starting_node(client: GameClient) -> None:
 def claim_next_edge_with_strategy(
     game: Game,
     strategy: BaseStrategy,
-    circuit_cls: type[BaseCircuit],
-    circuit_path: Path | None = None,
+    circuit_cls: type[BaseCircuit]
 ) -> Dict[str, Any]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
-    if not claimable:
-        print("No claimable edges available yet.")
-        return False
-
     target = strategy.choose_edge(claimable)
-    if not target:
-        print("Strategy did not select an edge.")
-        return False
-
-    circuit = circuit_cls(circuit_path=circuit_path)
-    circuit.validate_edge(target)
-
+    circuit = circuit_cls()
     edge_id = tuple(target["edge_id"])
-    print(
-        f"Claiming {edge_id} (threshold: {target['base_threshold']:.3f}) "
-        f"with {circuit.get_num_bell_pairs(target)} Bell pairs..."
-    )
-
     return game.claim_edge(edge_id, circuit, target, capture_mode="real")
 
 def main() -> None:
@@ -136,7 +120,6 @@ def main() -> None:
                     discord.post_text(message)
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
-
 
 if __name__ == "__main__":
     main()
