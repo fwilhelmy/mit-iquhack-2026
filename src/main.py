@@ -7,7 +7,7 @@ from pathlib import Path
 
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy, ManualStrategy, GreedyStrategy
+from strategy import BaseStrategy, DummyStrategy, GreedyStrategy, ManualStrategy, NodeValueStrategy
 from circuits import BaseCircuit, BBPSSW, AaronCircuit, FirstCircuit
 from utils import discord
 
@@ -86,8 +86,9 @@ def main() -> None:
     game = Game(client)
 
     ensure_starting_node(client)
-    game.print_status()
-    strategy = ManualStrategy()
+    # game.print_status()
+    graph = game.get_graph_raw()
+    strategy = NodeValueStrategy(graph)
     print(
         "Starting auto-claim loop. "
         f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
