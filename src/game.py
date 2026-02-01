@@ -88,29 +88,7 @@ class Game:
                 threshold=threshold,
             )
         if mode == "real":
-            pre_status = self.client.get_status()
-            pre_owned_nodes = set(pre_status.get("owned_nodes", []))
-            result = self.client.claim_edge(
-                edge_id,
-                circuit.circuit_for_edge(resolved_edge),
-                resolved_flag,
-                resolved_pairs,
-            )
-            if result.get("ok") and result.get("data", {}).get("success"):
-                post_status = self.client.get_status()
-                post_owned_nodes = set(post_status.get("owned_nodes", []))
-                newly_captured = sorted(post_owned_nodes - pre_owned_nodes)
-                if newly_captured:
-                    player_id = post_status.get("player_id") or pre_status.get("player_id") or "Unknown"
-                    name = post_status.get("name") or pre_status.get("name") or ""
-                    score = post_status.get("score", 0)
-                    for node_id in newly_captured:
-                        message = (
-                            f"Captured node {node_id} by {player_id}"
-                            f"{f' ({name})' if name else ''}. "
-                            f"Current score: {score}"
-                        )
-                        discord.post_text(message)
+            result = self.client.claim_edge(edge_id, circuit.circuit, resolved_flag, resolved_pairs)
             return result
         return {
             "ok": False,
