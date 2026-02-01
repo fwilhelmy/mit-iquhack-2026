@@ -119,16 +119,22 @@ def main() -> None:
                     name = client.name or ""
                     score = data.get("score", 0)
                     edge_id = data.get("edge_id")
-                    edge_name = " - ".join(edge_id) if edge_id else "Unknown edge"
+                    edge_nodes = [str(node) for node in edge_id] if edge_id else []
+                    edge_name = " - ".join(edge_nodes) if edge_nodes else "Unknown edge"
+                    edge_nodes_display = ", ".join(edge_nodes) if edge_nodes else "Unknown"
                     fidelity = data.get("fidelity", 0)
                     threshold = data.get("threshold", 0)
                     status = client.get_status()
                     budget = status.get("budget", 0)
+                    session_id = status.get("session_id", "Unknown")
+                    session_name = status.get("name") or name
                     message = (
                         "```\n"
                         "Claim success\n"
                         f"Edge: {edge_name}\n"
+                        f"Edge nodes: {edge_nodes_display}\n"
                         f"Player: {player_id}{f' ({name})' if name else ''}\n"
+                        f"Session: {session_id}{f' ({session_name})' if session_name else ''}\n"
                         f"Score: {score}\n"
                         f"Budget: {budget}\n"
                         f"Fidelity: {fidelity:.4f} (threshold: {threshold:.4f})\n"
