@@ -29,20 +29,7 @@ class BaseCircuit(ABC):
     def get_flag_qubit(self, edge: Dict[str, Any]) -> int:
         """Choose the classical flag bit index for post-selection."""
 
-    def validate_edge(self, edge: Dict[str, Any]) -> None:
-        """Validate edge metadata against circuit limits."""
-        num_bell_pairs = self.get_num_bell_pairs(edge)
-        if num_bell_pairs < self.min_bell_pairs:
-            raise ValueError(
-                f"num_bell_pairs must be >= {self.min_bell_pairs} for {self.__class__.__name__}."
-            )
-        if num_bell_pairs > self.max_bell_pairs:
-            raise ValueError(
-                f"num_bell_pairs must be <= {self.max_bell_pairs} for {self.__class__.__name__}."
-            )
-
     def load(self, edge: Dict[str, Any]) -> QuantumCircuit:
-        self.validate_edge(edge)
         if self._circuit is not None:
             return self._circuit
 
