@@ -184,13 +184,17 @@ class ShaneCircuit(BaseCircuit):
         6: 18,
     }
 
-    def __init__(self, bell_pairs: int = 2, distillation_type: str = "z") -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.bell_pairs = bell_pairs
-        self.distillation_type = distillation_type
 
-    def build_circuit(self, edge: Dict[str, Any]) -> tuple[QuantumCircuit, int, int]:
-        bell_pairs = self.get_num_bell_pairs(edge)
+    def build_circuit(
+        self,
+        edge: Dict[str, Any],
+        bell_pairs: int | None = None,
+        distillation_type: str | None = None,
+    ) -> tuple[QuantumCircuit, int, int]:
+        bell_pairs = self.get_num_bell_pairs(edge, bell_pairs=bell_pairs)
+        distillation_type = distillation_type or edge.get("distillation_type", "z")
         try:
             builder = self._CIRCUIT_BUILDERS[bell_pairs]
         except KeyError as exc:
@@ -198,18 +202,21 @@ class ShaneCircuit(BaseCircuit):
         if bell_pairs == 1:
             circuit = builder()
         else:
-            circuit = builder(self.distillation_type)
-        flag_bit = self.get_flag_qubit(edge)
+            circuit = builder(distillation_type)
+        flag_bit = self.get_flag_qubit(edge, bell_pairs=bell_pairs)
         return circuit, flag_bit, bell_pairs
 
-    def get_num_bell_pairs(self, edge: Dict[str, Any]) -> int:
-        return self.bell_pairs
+    def get_num_bell_pairs(self, edge: Dict[str, Any], bell_pairs: int | None = None) -> int:
+        if bell_pairs is not None:
+            return bell_pairs
+        return int(edge.get("bell_pairs", 2))
 
-    def get_flag_qubit(self, edge: Dict[str, Any]) -> int:
+    def get_flag_qubit(self, edge: Dict[str, Any], bell_pairs: int | None = None) -> int:
+        resolved_pairs = self.get_num_bell_pairs(edge, bell_pairs=bell_pairs)
         try:
-            return self._FLAG_BITS[self.bell_pairs]
+            return self._FLAG_BITS[resolved_pairs]
         except KeyError as exc:
-            raise ValueError(f"Unsupported bell pair count: {self.bell_pairs}") from exc
+            raise ValueError(f"Unsupported bell pair count: {resolved_pairs}") from exc
 
     def attempt_claims(
         self,
@@ -228,17 +235,20 @@ class ShaneCircuit(BaseCircuit):
             raise ValueError("Edge metadata is required to claim an edge.")
 
         difficulty = int(edge_info.get("difficulty_rating", 0))
-        self.distillation_type = "z" if difficulty % 2 == 1 else "x"
-        self.bell_pairs = 2
+        distillation_type = "z" if difficulty % 2 == 1 else "x"
+        bell_pairs = 2
 
         results: list[Dict[str, Any]] = []
         last_result: Dict[str, Any] | None = None
 
         for attempt in range(1, max_attempts + 1):
+            attempt_edge_info = dict(edge_info)
+            attempt_edge_info["bell_pairs"] = bell_pairs
+            attempt_edge_info["distillation_type"] = distillation_type
             last_result = game.claim_edge(
                 edge_id=edge_id,
                 circuit=self,
-                edge_info=edge_info,
+                edge_info=attempt_edge_info,
                 capture_mode=capture_mode,
             )
             results.append(last_result)
@@ -248,10 +258,10 @@ class ShaneCircuit(BaseCircuit):
 
             fidelity = last_result.get("data", {}).get("fidelity")
             if fidelity is not None and fidelity > 0.75:
-                self.bell_pairs = self._next_bell_pair_count()
+                bell_pairs = self._next_bell_pair_count(bell_pairs)
             else:
-                self.distillation_type = "x" if self.distillation_type == "z" else "z"
-                self.bell_pairs = 2
+                distillation_type = "x" if distillation_type == "z" else "z"
+                bell_pairs = 2
 
         return {
             "ok": bool(last_result and last_result.get("ok", False)),
@@ -260,8 +270,8 @@ class ShaneCircuit(BaseCircuit):
             "last_result": last_result,
         }
 
-    def _next_bell_pair_count(self) -> int:
+    def _next_bell_pair_count(self, bell_pairs: int) -> int:
         for count in self._BELL_PAIR_STEPS:
-            if count > self.bell_pairs:
+            if count > bell_pairs:
                 return count
-        return self.bell_pairs
+        return bell_pairs
