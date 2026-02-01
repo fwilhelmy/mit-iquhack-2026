@@ -7,7 +7,10 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 
 from graphs import Edge, EdgeId, GraphData, Node
+from strategy.NodeValueStrategy import NodeValueStrategy
 import matplotlib.pyplot as plt
+
+HAS_MATPLOTLIB = True
 
 class GraphTool:
     """Visualization tool for the quantum network graph."""
@@ -16,6 +19,7 @@ class GraphTool:
         self.graph: nx.Graph = nx.Graph()
         self.nodes: Dict[str, Node] = {}
         self.edges: Dict[EdgeId, Edge] = {}
+        self.graph_data: GraphData = {"nodes": [], "edges": []}
         if graph_data:
             self.load_from_json(graph_data)
 
@@ -24,6 +28,7 @@ class GraphTool:
         self.graph.clear()
         self.nodes.clear()
         self.edges.clear()
+        self.graph_data = graph_data
 
         for node in graph_data.get("nodes", []):
             node_id = node["node_id"]
@@ -193,3 +198,47 @@ class GraphTool:
             if len(claimable) > 5:
                 print(f"  ... and {len(claimable) - 5} more")
         print("=" * 50)
+
+    def render_degree_heatmap(
+        self,
+        figsize: Tuple[int, int] = (10, 6),
+        save_path: Optional[str] = None,
+        cmap: str = "viridis",
+    ) -> None:
+        """Render a heatmap of nodes based on coordinates and NodeValueStrategy scores."""
+        if not HAS_MATPLOTLIB:
+            print("matplotlib not installed. Install with: pip install matplotlib")
+            return
+
+        longitudes = []
+        latitudes = []
+        scores = []
+        node_scores = NodeValueStrategy(self.graph_data).node_scores
+
+        for node_id, node in self.nodes.items():
+            latitude = node.get("latitude")
+            longitude = node.get("longitude")
+            if latitude is None or longitude is None:
+                continue
+            longitudes.append(longitude)
+            latitudes.append(latitude)
+            scores.append(node_scores.get(node_id, 0.0))
+
+        if not longitudes:
+            print("No node coordinates available to render heatmap.")
+            return
+
+        fig, ax = plt.subplots(figsize=figsize)
+        scatter = ax.scatter(longitudes, latitudes, c=scores, cmap=cmap, s=60, alpha=0.8, edgecolors="black")
+        ax.set_title("Node Score Heatmap")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        fig.colorbar(scatter, ax=ax, label="Score")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path, dpi=150, bbox_inches="tight")
+            print(f"Saved to {save_path}")
+        else:
+            plt.show()
