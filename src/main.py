@@ -127,14 +127,20 @@ def main() -> None:
                     name = client.name or ""
                     score = data.get("score", 0)
                     edge_id = data.get("edge_id")
-                    edge_desc = f" on {tuple(edge_id)}" if edge_id else ""
+                    edge_name = " - ".join(edge_id) if edge_id else "Unknown edge"
                     fidelity = data.get("fidelity", 0)
                     threshold = data.get("threshold", 0)
+                    status = client.get_status()
+                    budget = status.get("budget", 0)
                     message = (
-                        f"Claim success{edge_desc} by {player_id}"
-                        f"{f' ({name})' if name else ''}. "
-                        f"Score: {score}. Fidelity: {fidelity:.4f} "
-                        f"(threshold: {threshold:.4f})."
+                        "```\n"
+                        "Claim success\n"
+                        f"Edge: {edge_name}\n"
+                        f"Player: {player_id}{f' ({name})' if name else ''}\n"
+                        f"Score: {score}\n"
+                        f"Budget: {budget}\n"
+                        f"Fidelity: {fidelity:.4f} (threshold: {threshold:.4f})\n"
+                        "```"
                     )
                     discord.post_text(message)
     except KeyboardInterrupt:
