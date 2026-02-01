@@ -251,6 +251,8 @@ class ShaneCircuit(BaseCircuit):
                 edge_info=attempt_edge_info,
                 capture_mode=capture_mode,
             )
+            last_result['bell_pairs'] = bell_pairs
+            last_result['distillation_type'] = distillation_type
             results.append(last_result)
 
             if last_result.get("ok", False) and last_result.get("data", {}).get("success", False):
