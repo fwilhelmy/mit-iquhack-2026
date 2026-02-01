@@ -1,7 +1,6 @@
 """Utility helpers for the IonQ challenge package."""
 
-from . import discord, simulation, visualization
-from .simulation import simulate_capture
+from . import discord, visualization
 from .visualization import GraphTool
 
-__all__ = ["GraphTool", "discord", "simulate_capture", "simulation", "visualization"]
+__all__ = ["GraphTool", "discord", "visualization"]

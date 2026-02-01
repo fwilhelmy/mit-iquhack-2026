@@ -6,14 +6,8 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 
-from graph_types import Edge, EdgeId, GraphData, Node
-
-try:
-    import matplotlib.pyplot as plt
-    HAS_MATPLOTLIB = True
-except ImportError:
-    HAS_MATPLOTLIB = False
-
+from graphs import Edge, EdgeId, GraphData, Node
+import matplotlib.pyplot as plt
 
 class GraphTool:
     """Visualization tool for the quantum network graph."""
