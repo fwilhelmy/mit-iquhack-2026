@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING
 
 from qiskit.circuit.classical import expr
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 from circuits.BaseCircuit import BaseCircuit
+
+if TYPE_CHECKING:
+    from game import Game
 
 def measure_z_errors():
     """
@@ -165,6 +168,8 @@ def distillation_circuit_6(t):
 class ShaneCircuit(BaseCircuit):
     """Shane's distillation circuit family."""
 
+    _BELL_PAIR_STEPS = (2, 4, 6)
+
     _CIRCUIT_BUILDERS = {
         1: shane_distillation_circuit_1,
         2: shane_distillation_circuit_2,
@@ -205,3 +210,58 @@ class ShaneCircuit(BaseCircuit):
             return self._FLAG_BITS[self.bell_pairs]
         except KeyError as exc:
             raise ValueError(f"Unsupported bell pair count: {self.bell_pairs}") from exc
+
+    def attempt_claims(
+        self,
+        game: "Game",
+        edge_id: tuple[str, str],
+        edge_info: Dict[str, Any] | None = None,
+        capture_mode: str = "real",
+        max_attempts: int = 1,
+    ) -> Dict[str, Any]:
+        """Attempt to claim an edge using Shane's adaptive heuristic."""
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1.")
+        if edge_info is None:
+            edge_info = game.get_edge_info(edge_id[0], edge_id[1])
+        if edge_info is None:
+            raise ValueError("Edge metadata is required to claim an edge.")
+
+        difficulty = int(edge_info.get("difficulty_rating", 0))
+        self.distillation_type = "z" if difficulty % 2 == 1 else "x"
+        self.bell_pairs = 2
+
+        results: list[Dict[str, Any]] = []
+        last_result: Dict[str, Any] | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            last_result = game.claim_edge(
+                edge_id=edge_id,
+                circuit=self,
+                edge_info=edge_info,
+                capture_mode=capture_mode,
+            )
+            results.append(last_result)
+
+            if last_result.get("ok", False) and last_result.get("data", {}).get("success", False):
+                break
+
+            fidelity = last_result.get("data", {}).get("fidelity")
+            if fidelity is not None and fidelity > 0.75:
+                self.bell_pairs = self._next_bell_pair_count()
+            else:
+                self.distillation_type = "x" if self.distillation_type == "z" else "z"
+                self.bell_pairs = 2
+
+        return {
+            "ok": bool(last_result and last_result.get("ok", False)),
+            "attempts": len(results),
+            "results": results,
+            "last_result": last_result,
+        }
+
+    def _next_bell_pair_count(self) -> int:
+        for count in self._BELL_PAIR_STEPS:
+            if count > self.bell_pairs:
+                return count
+        return self.bell_pairs
