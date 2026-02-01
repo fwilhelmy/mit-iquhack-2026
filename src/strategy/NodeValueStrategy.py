@@ -59,14 +59,18 @@ class NodeValueStrategy(BaseStrategy):
             + self.degree_weight * degree
         )
 
-    def _edge_value(self, edge: Edge) -> tuple[float, float, tuple[str, str]]:
+    def _edge_value(self, edge: Edge) -> tuple[float, tuple[str, str]]:
         node_a, node_b = edge.get("edge_id", ("", ""))
-        score_a = self.node_scores.get(node_a, 0.0)
-        score_b = self.node_scores.get(node_b, 0.0)
-        best = max(score_a, score_b)
-        combined = score_a + score_b
+        target_score = self.node_scores.get(node_a, 0.0)
+        origin_score = self.node_scores.get(node_b, 0.0)
+
+        difficulty = edge.get("difficulty_rating", 0)
+        threshold = edge.get("base_threshold", 0)
+        edge_score = 1.0 / (1.0 + difficulty + threshold)
+
+        total_score = target_score + 0.1 * edge_score + 0.01 * origin_score
         edge_id = tuple(sorted((node_a, node_b)))
-        return (-best, -combined, edge_id)
+        return (-total_score, edge_id)
 
     def sort_edges(self, edges: List[Edge]) -> List[Edge]:
         return sorted(edges, key=self._edge_value)

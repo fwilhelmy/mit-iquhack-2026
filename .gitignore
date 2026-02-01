@@ -1,4 +1,5 @@
 session.json
+.idea
 
 .mypy_cache/
 .vscode/
