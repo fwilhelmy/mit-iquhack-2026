@@ -8,7 +8,7 @@ from pathlib import Path
 from game import Game
 from session import Session
 from strategy import BaseStrategy, DummyStrategy, ManualStrategy, GreedyStrategy
-from circuits import BaseCircuit, BBPSSW, AaronCircuit
+from circuits import BaseCircuit, BBPSSW, AaronCircuit, FirstCircuit
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
@@ -17,7 +17,7 @@ sys.path.insert(0, str(CHALLENGE_DIR))
 from client import GameClient  # noqa: E402
 
 DEFAULT_NUM_BELL_PAIRS = 2
-DEFAULT_FLAG_BIT = 0
+DEFAULT_FLAG_BIT = 2
 DEFAULT_LOOP_DELAY_SECONDS = 3.0
 
 
@@ -75,7 +75,7 @@ def claim_next_edge_with_strategy(
     strategy: BaseStrategy,
     circuit: BaseCircuit,
     flag_bit: int = DEFAULT_FLAG_BIT,
-) -> bool:
+) -> Dict[str, Any]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
     if not claimable:
@@ -105,20 +105,7 @@ def claim_next_edge_with_strategy(
         f"with {num_bell_pairs} Bell pairs..."
     )
 
-    result = game.claim_edge(edge_id, circuit, num_bell_pairs, flag_bit, capture_mode="real")
-    if result.get("ok"):
-        data = result["data"]
-        print(f"Success: {data.get('success')}")
-        print(
-            f"Fidelity: {data.get('fidelity', 0):.4f} "
-            f"(threshold: {data.get('threshold', 0):.4f})"
-        )
-        print(f"Success probability: {data.get('success_probability', 0):.4f}")
-        return True
-
-    print(f"Error: {result.get('error', {}).get('message')}")
-    return False
-
+    return game.claim_edge(edge_id, circuit, num_bell_pairs, flag_bit, capture_mode="real")
 
 def main() -> None:
     session = Session()
@@ -128,7 +115,7 @@ def main() -> None:
     ensure_starting_node(client)
     game.print_status()
     strategy = ManualStrategy()
-    circuit = AaronCircuit(
+    circuit = FirstCircuit(
         num_bell_pairs=DEFAULT_NUM_BELL_PAIRS,
         flag_bit=DEFAULT_FLAG_BIT,
     )
@@ -138,8 +125,15 @@ def main() -> None:
     )
     try:
         while True:
-            claim_next_edge_with_strategy(game, strategy=strategy, circuit=circuit)
-            time.sleep(DEFAULT_LOOP_DELAY_SECONDS)
+            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit=circuit)
+            if result.get("ok"):
+                data = result["data"]
+                print(f"Success: {data.get('success')}")
+                print(
+                    f"Fidelity: {data.get('fidelity', 0):.4f} "
+                    f"(threshold: {data.get('threshold', 0):.4f})"
+                )
+                print(f"Success probability: {data.get('success_probability', 0):.4f}")
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
 
