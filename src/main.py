@@ -9,6 +9,7 @@ from game import Game
 from session import Session
 from strategy import BaseStrategy, DummyStrategy, ManualStrategy, GreedyStrategy
 from circuits import BaseCircuit, BBPSSW, AaronCircuit, FirstCircuit
+from utils import discord
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHALLENGE_DIR = REPO_ROOT / "2026-IonQ-challenge"
@@ -134,6 +135,21 @@ def main() -> None:
                     f"(threshold: {data.get('threshold', 0):.4f})"
                 )
                 print(f"Success probability: {data.get('success_probability', 0):.4f}")
+                if data.get("success"):
+                    player_id = client.player_id or "Unknown"
+                    name = client.name or ""
+                    score = data.get("score", 0)
+                    edge_id = data.get("edge_id")
+                    edge_desc = f" on {tuple(edge_id)}" if edge_id else ""
+                    fidelity = data.get("fidelity", 0)
+                    threshold = data.get("threshold", 0)
+                    message = (
+                        f"Claim success{edge_desc} by {player_id}"
+                        f"{f' ({name})' if name else ''}. "
+                        f"Score: {score}. Fidelity: {fidelity:.4f} "
+                        f"(threshold: {threshold:.4f})."
+                    )
+                    discord.post_text(message)
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
 
