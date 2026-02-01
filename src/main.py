@@ -87,7 +87,7 @@ def claim_next_edge_with_strategy(
         max_attempts=max_attempts,
     )
     last_result = results.get("last_result", {})
-    strategy.observe_claim_result(target, last_result)
+    # strategy.observe_claim_result(target, last_result)
     return last_result
 
 def main() -> None:
@@ -97,18 +97,19 @@ def main() -> None:
 
     ensure_starting_node(client)
     # game.print_status()
-    graph = game.get_graph_raw()
-    status = client.get_status()
-    strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    # graph = game.get_graph_raw()
+    # status = client.get_status()
+    # strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    strategy = NaiveStrategy()
     print("Starting auto-claim loop.")
     try:
         while True:
-            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
             result = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
                 circuit_cls=ShaneCircuit,
-                max_attempts=3,
+                max_attempts=2,
             )
             if result.get("ok"):
                 data = result["data"]
@@ -127,14 +128,13 @@ def main() -> None:
                     status = client.get_status()
                     budget = status.get("budget", 0)
                     session_id = status.get("session_id", "Unknown")
-                    session_name = status.get("name") or name
                     message = (
                         "```\n"
                         "Claim success\n"
                         f"Edge: {edge_name}\n"
                         f"Edge nodes: {edge_nodes_display}\n"
                         f"Player: {player_id}{f' ({name})' if name else ''}\n"
-                        f"Session: {session_id}{f' ({session_name})' if session_name else ''}\n"
+                        f"Session:\n"
                         f"Score: {score}\n"
                         f"Budget: {budget}\n"
                         f"Fidelity: {fidelity:.4f} (threshold: {threshold:.4f})\n"
