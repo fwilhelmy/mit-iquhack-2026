@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from graph_types import Edge
+from graphs import Edge
 from .BaseStrategy import BaseStrategy
 
 

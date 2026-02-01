@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from graph_types import Edge
+from graphs import Edge
 
 
 class BaseStrategy(ABC):
