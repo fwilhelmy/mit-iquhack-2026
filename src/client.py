@@ -54,7 +54,7 @@ class GameClient:
             url,
             json=payload,
             headers=self._headers(),
-            timeout=120 if method.lower() == "get" else 30,
+            timeout=120 if method.lower() == "get" else 60,
         )
         response.raise_for_status()
         return response.json()
