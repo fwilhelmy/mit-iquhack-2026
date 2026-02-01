@@ -8,9 +8,17 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from graphs import Edge
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy, ManualStrategy, AdaptiveStrategy, NaiveStrategy
+from strategy import (
+    BaseStrategy,
+    DummyStrategy,
+    ManualStrategy,
+    AdaptiveStrategy,
+    NaiveStrategy,
+    BlackListStrategy,
+)
 from circuits import BaseCircuit, AaronCircuit, ShaneCircuit
 from utils import discord
 
@@ -76,10 +84,12 @@ def claim_next_edge_with_strategy(
     strategy: BaseStrategy,
     circuit_cls: type[BaseCircuit],
     max_attempts: int = 1,
-) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]], Edge | None]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
     target = strategy.choose_edge(claimable)
+    if not target:
+        return {}, [], None
     circuit = circuit_cls()
     edge_id = tuple(target["edge_id"])
     results = circuit.attempt_claims(
@@ -105,7 +115,7 @@ def claim_next_edge_with_strategy(
             else:
                 record[key] = value
         attempt_records.append(record)
-    return last_result, attempt_records
+    return last_result, attempt_records, target
 
 def write_attempts_csv(records: List[Dict[str, Any]], output_path: Path) -> None:
     if not records:
@@ -129,20 +139,23 @@ def main() -> None:
     # game.print_status()
     # graph = game.get_graph_raw()
     # status = client.get_status()
-    # strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
-    strategy = NaiveStrategy()
+    # base_strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    base_strategy = NaiveStrategy()
+    strategy = BlackListStrategy(base_strategy)
     print("Starting auto-claim loop.")
     all_attempts: List[Dict[str, Any]] = []
     try:
         while True:
-            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
-            result, attempts = claim_next_edge_with_strategy(
+            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            result, attempts, target_edge = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
                 circuit_cls=ShaneCircuit,
                 max_attempts=2,
             )
             all_attempts.extend(attempts)
+            if target_edge and (not result.get("ok") or not (result.get("data") or {}).get("success")):
+                strategy.add_blacklisted_edge(target_edge)
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
