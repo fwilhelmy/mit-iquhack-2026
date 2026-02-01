@@ -111,9 +111,9 @@ def shane_distillation_circuit_4(t):
     qc = QuantumCircuit(qr, cr)
 
     ##ORDERING IS IMPORTANT HERE
-    qc.compose(q, qubits=[0, 2, 3, 1], clbits=range(3), inplace=True)
-    qc.compose(q, qubits=[6, 4, 5, 7], clbits=range(3, 6), inplace=True)
-    qc.compose(q, qubits=[2, 3, 4, 5], clbits=range(6, 9), inplace=True)
+    qc.compose(q, qubits =[0,1,6,7],clbits=range(3),inplace=True)
+    qc.compose(q, qubits=[2,3,4,5], clbits=range(3,6),inplace=True)
+    qc.compose(q, qubits=[1,3,4,6], clbits=range(6,9),inplace=True)
 
     false1 = expr.bit_or(expr.lift(qc.clbits[2]), expr.lift(qc.clbits[5]))
     qc.store(qc.clbits[9], false1)
@@ -137,14 +137,14 @@ def distillation_circuit_6(t):
     qz = create_z()
     qx = create_x()
     ##ORDERING IS IMPORTANT HERE
-    # Stage 1
-    qc.compose(qx, qubits=[0, 1, 2, 3], clbits=range(3), inplace=True)
-    qc.compose(qx, qubits=[8, 9, 10, 11], clbits=range(3, 6), inplace=True)
-    # Stage 2
-    qc.compose(qx, qubits=[1, 4, 5, 2], clbits=range(6, 9), inplace=True)
-    qc.compose(qx, qubits=[9, 6, 7, 10], clbits=range(9, 12), inplace=True)
-    # Stage 3
-    qc.compose(qx, qubits=[4, 5, 6, 7], clbits=range(12, 15), inplace=True)
+    #Stage 1
+    qc.compose(qx, qubits=[0,1,10,11], clbits=range(3),inplace=True)
+    qc.compose(qx, qubits=[2,3,8,9], clbits=range(3,6),inplace=True)
+    qc.compose(qx, qubits=[4,5,6,7], clbits=range(6,9),inplace=True)
+    #Stage 2
+    qc.compose(qx, qubits=[1,3,8,10], clbits=range(9,12),inplace=True)
+    #Stage 3
+    qc.compose(qx, qubits=[3,5,6,8], clbits=range(12,15),inplace=True)
 
     # COMPARISONS
     false1 = expr.bit_or(expr.lift(qc.clbits[2]), expr.lift(qc.clbits[5]))
