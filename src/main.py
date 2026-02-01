@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import sys
 import time
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 from game import Game
 from session import Session
@@ -73,7 +76,7 @@ def claim_next_edge_with_strategy(
     strategy: BaseStrategy,
     circuit_cls: type[BaseCircuit],
     max_attempts: int = 1,
-) -> Dict[str, Any]:
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
     target = strategy.choose_edge(claimable)
@@ -87,8 +90,35 @@ def claim_next_edge_with_strategy(
         max_attempts=max_attempts,
     )
     last_result = results.get("last_result", {})
-    # strategy.observe_claim_result(target, last_result)
-    return last_result
+    strategy.observe_claim_result(target, last_result)
+    attempt_records: List[Dict[str, Any]] = []
+    for attempt_index, attempt_result in enumerate(results.get("results", []), start=1):
+        record: Dict[str, Any] = {
+            "edge_id": f"{edge_id[0]}-{edge_id[1]}",
+            "edge_node_a": edge_id[0],
+            "edge_node_b": edge_id[1],
+            "attempt": attempt_index,
+        }
+        for key, value in attempt_result.items():
+            if isinstance(value, (dict, list)):
+                record[key] = json.dumps(value, ensure_ascii=False)
+            else:
+                record[key] = value
+        attempt_records.append(record)
+    return last_result, attempt_records
+
+def write_attempts_csv(records: List[Dict[str, Any]], output_path: Path) -> None:
+    if not records:
+        return
+    base_fields = ["edge_id", "edge_node_a", "edge_node_b", "attempt"]
+    extra_fields = sorted({key for record in records for key in record.keys()} - set(base_fields))
+    fieldnames = base_fields + extra_fields
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for record in records:
+            writer.writerow(record)
 
 def main() -> None:
     session = Session()
@@ -102,15 +132,17 @@ def main() -> None:
     # strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
     strategy = NaiveStrategy()
     print("Starting auto-claim loop.")
+    all_attempts: List[Dict[str, Any]] = []
     try:
         while True:
-            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
-            result = claim_next_edge_with_strategy(
+            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            result, attempts = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
                 circuit_cls=ShaneCircuit,
                 max_attempts=2,
             )
+            all_attempts.extend(attempts)
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
@@ -147,6 +179,11 @@ def main() -> None:
                 break
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
+    finally:
+        output_path = REPO_ROOT / "claim_attempts.csv"
+        write_attempts_csv(all_attempts, output_path)
+        if all_attempts:
+            print(f"Wrote {len(all_attempts)} claim attempts to {output_path}")
 
 if __name__ == "__main__":
     main()
