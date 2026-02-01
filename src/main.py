@@ -184,10 +184,6 @@ def main() -> None:
                         "```"
                     )
                     discord.post_text(message)
-
-            if status.get("budget", 0) <= 1:
-                print("Budget exhausted. Stopping auto-claim loop.")
-                break
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
     finally:
