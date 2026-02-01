@@ -7,7 +7,7 @@ from pathlib import Path
 
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy, GreedyStrategy, ManualStrategy, AdaptiveStrategy
+from strategy import BaseStrategy, DummyStrategy, ManualStrategy, AdaptiveStrategy, NaiveStrategy
 from circuits import BaseCircuit, AaronCircuit, ShaneCircuit
 from utils import discord
 
@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the IonQ challenge client.")
     parser.add_argument(
         "--strategy",
-        choices=("dummy", "manual"),
+        choices=("dummy", "manual", "naive", "adaptive"),
         default="dummy",
         help="Strategy to use when selecting the next edge.",
     )
@@ -97,17 +97,13 @@ def main() -> None:
 
     ensure_starting_node(client)
     # game.print_status()
-    # graph = game.get_graph_raw()
-    # status = client.get_status()
-    #strategy = NodeValueStrategy(graph, owned_nodes=status.get("owned_nodes", []))
-    strategy = ManualStrategy()
-    print(
-        "Starting auto-claim loop. "
-        f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
-    )
+    graph = game.get_graph_raw()
+    status = client.get_status()
+    strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    print("Starting auto-claim loop.")
     try:
         while True:
-            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
             result = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
@@ -117,11 +113,7 @@ def main() -> None:
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
-                print(
-                    f"Fidelity: {data.get('fidelity', 0):.4f} "
-                    f"(threshold: {data.get('threshold', 0):.4f})"
-                )
-                print(f"Success probability: {data.get('success_probability', 0):.4f}")
+                print(data)
                 if data.get("success"):
                     player_id = client.player_id or "Unknown"
                     name = client.name or ""
@@ -143,6 +135,10 @@ def main() -> None:
                         "```"
                     )
                     discord.post_text(message)
+
+            if status.get("budget", 0) <= 1:
+                print("Budget exhausted. Stopping auto-claim loop.")
+                break
     except KeyboardInterrupt:
         print("Auto-claim loop stopped.")
 
