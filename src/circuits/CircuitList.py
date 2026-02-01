@@ -45,7 +45,37 @@ def Shane_block_layout_xx__x_4():
     qr = QuantumRegister(num_bell_pairs*2, 'q')  # 4 qubits for 2 Bell pairs
     cr = ClassicalRegister(num_bell_pairs*3, 'c')  # Classical bits for measurements + flag
     qc = QuantumCircuit(qr, cr)
-    
+
+    def create_x():
+        qubit_pairs = 2
+        qc = QuantumCircuit(qubit_pairs * 2, 3)
+
+        qc.cx(1, 0)
+        qc.cx(2, 3)
+
+        qc.measure(0, 0)
+        qc.measure(3, 1)
+        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
+        qc.store(qc.clbits[2], condition1)
+        return qc
+
+    def create_z():
+        qubit_pairs = 2
+        qc = QuantumCircuit(qubit_pairs * 2, 3)
+
+        qc.cx(0, qubit_pairs - 1)
+        qc.h(0)
+        qc.cx(qubit_pairs * 2 - 1, qubit_pairs)
+        qc.h(qubit_pairs * 2 - 1)
+
+        qc.measure(0, 0)
+        qc.measure(3, 1)
+
+        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
+        qc.store(qc.clbits[2], condition1)
+        qc.name = "Z_distillation"
+        return qc
+
     qz = create_z()
     qx = create_x()
     ##ORDERING IS IMPORTANT HEREqc,[0,2,3,1],range(3)
@@ -57,33 +87,5 @@ def Shane_block_layout_xx__x_4():
     qc.store(qc.clbits[9],false1) 
     false_condition = expr.bit_or(expr.lift(qc.clbits[8]),expr.lift(qc.clbits[9]))
     qc.store(qc.clbits[10],false_condition)
-    def create_x():
-        qubit_pairs = 2
-        qc = QuantumCircuit(qubit_pairs*2,3)
-        
-        qc.cx(1, 0)
-        qc.cx(2, 3)
 
-        qc.measure(0,0)
-        qc.measure(3, 1)
-        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]),expr.lift(qc.clbits[1]))
-        qc.store(qc.clbits[2],condition1)   
-        return qc
-    
-    def create_z():
-        qubit_pairs = 2
-        qc = QuantumCircuit(qubit_pairs*2, 3)
-
-        qc.cx(0 ,qubit_pairs-1)
-        qc.h(0)
-        qc.cx(qubit_pairs*2-1,qubit_pairs)  
-        qc.h(qubit_pairs*2-1)     
-
-        qc.measure(0, 0)
-        qc.measure(3, 1)
-
-        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]),expr.lift(qc.clbits[1]))
-        qc.store(qc.clbits[2],condition1)
-        qc.name = "Z_distillation"
-        return qc
     return qc
