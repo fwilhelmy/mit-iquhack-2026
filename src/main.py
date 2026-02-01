@@ -8,7 +8,7 @@ from pathlib import Path
 from game import Game
 from session import Session
 from strategy import BaseStrategy, DummyStrategy, GreedyStrategy, ManualStrategy, NodeValueStrategy
-from circuits import BaseCircuit, BBPSSW, AaronCircuit, FirstCircuit
+from circuits import BaseCircuit, AaronCircuit, ShaneCircuit
 from utils import discord
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -87,8 +87,8 @@ def main() -> None:
 
     ensure_starting_node(client)
     # game.print_status()
-    graph = game.get_graph_raw()
-    status = client.get_status()
+    # graph = game.get_graph_raw()
+    # status = client.get_status()
     #strategy = NodeValueStrategy(graph, owned_nodes=status.get("owned_nodes", []))
     strategy = ManualStrategy()
     print(
@@ -98,7 +98,7 @@ def main() -> None:
     try:
         while True:
             # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
-            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=Shane)
+            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=ShaneCircuit)
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
