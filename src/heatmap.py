@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 from typing import Iterable, Set
@@ -8,58 +7,21 @@ from typing import Iterable, Set
 import matplotlib.pyplot as plt
 import networkx as nx
 
+from game import Game
 from graphs import GraphData
+from session import Session
 from strategy.NodeValueStrategy import NodeValueStrategy
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Render a node score heatmap with owned nodes highlighted."
-    )
-    parser.add_argument(
-        "--graph",
-        type=Path,
-        required=True,
-        help="Path to the graph JSON file (GraphData format).",
-    )
-    parser.add_argument(
-        "--owned",
-        default="",
-        help="Comma-separated list of owned node IDs to highlight in red.",
-    )
-    parser.add_argument(
-        "--owned-file",
-        type=Path,
-        help="Optional file containing owned node IDs (JSON list or newline-delimited).",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        help="If provided, save the heatmap to this path instead of showing it.",
-    )
-    parser.add_argument(
-        "--figsize",
-        default="10,6",
-        help="Figure size as 'width,height' (default: 10,6).",
-    )
-    parser.add_argument(
-        "--cmap",
-        default="viridis",
-        help="Matplotlib colormap to use for unowned nodes.",
-    )
-    return parser.parse_args()
-
-
-def load_graph_data(path: Path) -> GraphData:
-    return json.loads(path.read_text())
 
 
 def normalize_owned_nodes(items: Iterable[str]) -> Set[str]:
     return {item.strip() for item in items if item.strip()}
 
 
-def load_owned_nodes(arg_value: str, owned_file: Path | None) -> Set[str]:
-    owned_nodes = normalize_owned_nodes(arg_value.split(",")) if arg_value else set()
+def load_owned_nodes(
+    status_owned_nodes: Iterable[str],
+    owned_file: Path | None = None,
+) -> Set[str]:
+    owned_nodes = normalize_owned_nodes(status_owned_nodes)
     if not owned_file:
         return owned_nodes
 
@@ -90,19 +52,12 @@ def build_graph(graph_data: GraphData) -> nx.Graph:
     return graph
 
 
-def parse_figsize(raw_value: str) -> tuple[float, float]:
-    parts = [part.strip() for part in raw_value.split(",")]
-    if len(parts) != 2:
-        raise ValueError("figsize must be formatted as width,height")
-    return float(parts[0]), float(parts[1])
-
-
 def render_heatmap(
     graph_data: GraphData,
     owned_nodes: Set[str],
-    output: Path | None,
-    figsize: tuple[float, float],
-    cmap: str,
+    output: Path | None = None,
+    figsize: tuple[float, float] = (10, 6),
+    cmap: str = "viridis",
 ) -> None:
     graph = build_graph(graph_data)
     if graph.number_of_nodes() == 0:
@@ -177,16 +132,15 @@ def render_heatmap(
 
 
 def main() -> None:
-    args = parse_args()
-    graph_data = load_graph_data(args.graph)
-    owned_nodes = load_owned_nodes(args.owned, args.owned_file)
-    figsize = parse_figsize(args.figsize)
+    session = Session()
+    game = Game(session.client)
+    graph_data = game.get_graph_raw()
+    status = session.client.get_status()
+    status_owned_nodes = status.get("owned_nodes", []) if status else []
+    owned_nodes = load_owned_nodes(status_owned_nodes)
     render_heatmap(
         graph_data,
         owned_nodes,
-        output=args.output,
-        figsize=figsize,
-        cmap=args.cmap,
     )
 
 
