@@ -10,7 +10,7 @@ import networkx as nx
 from game import Game
 from graphs import GraphData
 from session import Session
-from strategy.NodeValueStrategy import NodeValueStrategy
+from strategy.AdaptiveStrategy import AdaptiveStrategy
 
 
 def normalize_owned_nodes(items: Iterable[str]) -> Set[str]:
@@ -63,7 +63,7 @@ def render_heatmap(
     if graph.number_of_nodes() == 0:
         raise SystemExit("No nodes available to render heatmap.")
 
-    scores = NodeValueStrategy(graph_data).node_scores
+    scores = AdaptiveStrategy(graph_data).node_scores
     pos = nx.spring_layout(graph, seed=42)
 
     nodes = list(graph.nodes())

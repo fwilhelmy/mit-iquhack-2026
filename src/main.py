@@ -7,7 +7,7 @@ from pathlib import Path
 
 from game import Game
 from session import Session
-from strategy import BaseStrategy, DummyStrategy, GreedyStrategy, ManualStrategy, NodeValueStrategy
+from strategy import BaseStrategy, DummyStrategy, GreedyStrategy, ManualStrategy, AdaptiveStrategy
 from circuits import BaseCircuit, AaronCircuit, ShaneCircuit
 from utils import discord
 
@@ -79,13 +79,16 @@ def claim_next_edge_with_strategy(
     target = strategy.choose_edge(claimable)
     circuit = circuit_cls()
     edge_id = tuple(target["edge_id"])
-    return circuit.attempt_claims(
+    results = circuit.attempt_claims(
         game=game,
         edge_id=edge_id,
         edge_info=target,
         capture_mode="real",
         max_attempts=max_attempts,
     )
+    last_result = results.get("last_result", {})
+    strategy.observe_claim_result(target, last_result)
+    return last_result
 
 def main() -> None:
     session = Session()
@@ -108,12 +111,11 @@ def main() -> None:
             result = claim_next_edge_with_strategy(
                 game,
                 strategy=strategy,
-                circuit_cls=Shane,
+                circuit_cls=ShaneCircuit,
                 max_attempts=3,
             )
-            last_result = result.get("last_result", {})
-            if last_result.get("ok"):
-                data = last_result["data"]
+            if result.get("ok"):
+                data = result["data"]
                 print(f"Success: {data.get('success')}")
                 print(
                     f"Fidelity: {data.get('fidelity', 0):.4f} "

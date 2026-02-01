@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 
 from graphs import Edge, EdgeId, GraphData, Node
-from strategy.NodeValueStrategy import NodeValueStrategy
+from strategy.AdaptiveStrategy import AdaptiveStrategy
 import matplotlib.pyplot as plt
 
 HAS_MATPLOTLIB = True
@@ -224,7 +224,7 @@ class GraphTool:
             print("No nodes available to render heatmap.")
             return
 
-        node_scores = NodeValueStrategy(self.graph_data).node_scores
+        node_scores = AdaptiveStrategy(self.graph_data).node_scores
         pos = nx.spring_layout(graph_to_render, seed=42)
         nodes_in_view = list(graph_to_render.nodes())
         scores = [node_scores.get(node_id, 0.0) for node_id in nodes_in_view]
