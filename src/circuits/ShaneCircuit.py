@@ -76,7 +76,7 @@ def create_z():
     qc.name = "Z_distillation"
     return qc
 
-def shane_distillation_circuit_1():
+def shane_distillation_circuit_1(t):
     "Basically, the identity"
     qc = QuantumCircuit(2, 1)
     return qc
