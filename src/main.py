@@ -71,14 +71,21 @@ def ensure_starting_node(client: GameClient) -> None:
 def claim_next_edge_with_strategy(
     game: Game,
     strategy: BaseStrategy,
-    circuit_cls: type[BaseCircuit]
+    circuit_cls: type[BaseCircuit],
+    max_attempts: int = 1,
 ) -> Dict[str, Any]:
     """Attempt to claim a single edge using a strategy."""
     claimable = game.get_claimable_edges()
     target = strategy.choose_edge(claimable)
     circuit = circuit_cls()
     edge_id = tuple(target["edge_id"])
-    return game.claim_edge(edge_id, circuit, target, capture_mode="real")
+    return circuit.attempt_claims(
+        game=game,
+        edge_id=edge_id,
+        edge_info=target,
+        capture_mode="real",
+        max_attempts=max_attempts,
+    )
 
 def main() -> None:
     session = Session()
@@ -98,9 +105,15 @@ def main() -> None:
     try:
         while True:
             # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
-            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=Shane)
-            if result.get("ok"):
-                data = result["data"]
+            result = claim_next_edge_with_strategy(
+                game,
+                strategy=strategy,
+                circuit_cls=Shane,
+                max_attempts=3,
+            )
+            last_result = result.get("last_result", {})
+            if last_result.get("ok"):
+                data = last_result["data"]
                 print(f"Success: {data.get('success')}")
                 print(
                     f"Fidelity: {data.get('fidelity', 0):.4f} "
