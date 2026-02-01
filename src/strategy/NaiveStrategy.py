@@ -6,8 +6,8 @@ from graphs import Edge
 from .BaseStrategy import BaseStrategy
 
 
-class GreedyStrategy(BaseStrategy):
-    """Greedy strategy prioritizing low difficulty and low threshold edges."""
+class NaiveStrategy(BaseStrategy):
+    """Naive strategy prioritizing low difficulty and low threshold edges."""
 
     def sort_edges(self, edges: List[Edge]) -> List[Edge]:
         return sorted(
