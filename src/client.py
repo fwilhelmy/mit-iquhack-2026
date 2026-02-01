@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 from qiskit import QuantumCircuit, qasm3
+
+from graph_types import GraphData
 
 
 @dataclass
@@ -111,7 +114,7 @@ class GameClient:
             return {}
         return self._get(f"/v1/status/{self.player_id}")
 
-    def get_graph_raw(self) -> Dict[str, Any]:
+    def get_graph_raw(self) -> GraphData:
         """Get the quantum network graph structure as raw JSON."""
         return self._get("/v1/graph")
 

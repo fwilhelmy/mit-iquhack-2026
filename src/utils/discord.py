@@ -10,8 +10,7 @@ DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1466973035599757478/7wNc
 def _resolve_webhook_url(webhook_url: Optional[str]) -> str:
     return (webhook_url or DISCORD_WEBHOOK_URL).strip()
 
-
-def post_text(message: str, webhook_url: Optional[str] = None, username: str = "QB-PIER") -> None:
+def post_text(message: str, webhook_url: Optional[str] = None, username: str = "Experiments") -> None:
     """Post a plain text message to Discord."""
     resolved_url = _resolve_webhook_url(webhook_url)
     if not resolved_url:
@@ -28,7 +27,7 @@ def post_image_with_caption(
     image_path: str,
     caption: str,
     webhook_url: Optional[str] = None,
-    username: str = "QB-PIER",
+    username: str = "Experiments",
 ) -> None:
     """Post an image file with a caption to Discord."""
     resolved_url = _resolve_webhook_url(webhook_url)

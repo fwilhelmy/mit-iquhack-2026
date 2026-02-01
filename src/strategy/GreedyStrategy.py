@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import List
 
+from graph_types import Edge
 from .BaseStrategy import BaseStrategy
-
-Edge = Dict[str, Any]
 
 
 class GreedyStrategy(BaseStrategy):
