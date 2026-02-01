@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-Edge = Dict[str, Any]
+from graph_types import Edge
 
 
 class BaseStrategy(ABC):
