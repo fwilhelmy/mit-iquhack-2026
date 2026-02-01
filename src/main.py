@@ -89,15 +89,16 @@ def main() -> None:
     # game.print_status()
     graph = game.get_graph_raw()
     status = client.get_status()
-    strategy = NodeValueStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    #strategy = NodeValueStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    strategy = ManualStrategy()
     print(
         "Starting auto-claim loop. "
         f"Waiting {DEFAULT_LOOP_DELAY_SECONDS:.1f}s between attempts."
     )
     try:
         while True:
-            strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
-            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=AaronCircuit)
+            # strategy.update_owned_nodes(client.get_status().get("owned_nodes", []))
+            result = claim_next_edge_with_strategy(game, strategy=strategy, circuit_cls=Shane)
             if result.get("ok"):
                 data = result["data"]
                 print(f"Success: {data.get('success')}")
