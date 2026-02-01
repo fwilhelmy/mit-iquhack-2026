@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-import pandas as pd
-
 from client import GameClient
 from circuits import BaseCircuit
 from graphs import Edge, GraphData, Node
 from utils import discord, visualization
 
-GraphFrames = Dict[str, pd.DataFrame]
+GraphFrames = Dict[str, List[Dict[str, Any]]]
 
 
 class Game:
@@ -21,11 +19,12 @@ class Game:
         self._cached_graph_frames: Optional[GraphFrames] = None
 
     def _to_graph_frames(self, graph: GraphData) -> GraphFrames:
-        nodes = pd.DataFrame(graph.get("nodes", []))
-        edges = pd.DataFrame(graph.get("edges", []))
-        if not edges.empty and "edge_id" in edges.columns:
-            edges = edges.copy()
-            edges[["node_a", "node_b"]] = pd.DataFrame(edges["edge_id"].tolist(), index=edges.index)
+        nodes = list(graph.get("nodes", []))
+        edges = [dict(edge) for edge in graph.get("edges", [])]
+        for edge in edges:
+            edge_id = edge.get("edge_id")
+            if edge_id and len(edge_id) == 2:
+                edge["node_a"], edge["node_b"] = edge_id
         return {"nodes": nodes, "edges": edges}
 
     def get_graph_raw(self, force: bool = False) -> GraphData:
@@ -108,25 +107,27 @@ class Game:
 
     def get_node_info(self, node_id: str) -> Optional[Node]:
         """Get information about a specific node."""
-        nodes = self.get_graph_frames().get("nodes", pd.DataFrame())
-        if nodes.empty or "node_id" not in nodes.columns:
+        nodes = self.get_graph_frames().get("nodes", [])
+        if not nodes:
             return None
-        match = nodes.loc[nodes["node_id"] == node_id]
-        if match.empty:
-            return None
-        return match.iloc[0].to_dict()
+        for node in nodes:
+            if node.get("node_id") == node_id:
+                return node
+        return None
 
     def get_edge_info(self, node_a: str, node_b: str) -> Optional[Edge]:
         """Get information about a specific edge."""
-        edges = self.get_graph_frames().get("edges", pd.DataFrame())
-        if edges.empty or "edge_id" not in edges.columns:
+        edges = self.get_graph_frames().get("edges", [])
+        if not edges:
             return None
         edge_id = tuple(sorted([node_a, node_b]))
-        edge_ids = edges["edge_id"].apply(lambda value: tuple(sorted(value)))
-        match = edges.loc[edge_ids == edge_id]
-        if match.empty:
-            return None
-        return match.iloc[0].to_dict()
+        for edge in edges:
+            value = edge.get("edge_id")
+            if value is None:
+                continue
+            if tuple(sorted(value)) == edge_id:
+                return edge
+        return None
 
     def get_status_summary(self) -> Dict[str, Any]:
         """Return a summarized view of player status."""
