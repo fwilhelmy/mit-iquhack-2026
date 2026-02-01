@@ -7,7 +7,10 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 
 from graphs import Edge, EdgeId, GraphData, Node
+from strategy.NodeValueStrategy import NodeValueStrategy
 import matplotlib.pyplot as plt
+
+HAS_MATPLOTLIB = True
 
 class GraphTool:
     """Visualization tool for the quantum network graph."""
@@ -16,6 +19,7 @@ class GraphTool:
         self.graph: nx.Graph = nx.Graph()
         self.nodes: Dict[str, Node] = {}
         self.edges: Dict[EdgeId, Edge] = {}
+        self.graph_data: GraphData = {"nodes": [], "edges": []}
         if graph_data:
             self.load_from_json(graph_data)
 
@@ -24,6 +28,7 @@ class GraphTool:
         self.graph.clear()
         self.nodes.clear()
         self.edges.clear()
+        self.graph_data = graph_data
 
         for node in graph_data.get("nodes", []):
             node_id = node["node_id"]
@@ -193,3 +198,56 @@ class GraphTool:
             if len(claimable) > 5:
                 print(f"  ... and {len(claimable) - 5} more")
         print("=" * 50)
+
+    def render_degree_heatmap(
+        self,
+        owned_nodes: Optional[Set[str]] = None,
+        radius: int = 2,
+        figsize: Tuple[int, int] = (10, 6),
+        save_path: Optional[str] = None,
+        cmap: str = "viridis",
+    ) -> None:
+        """Render a heatmap of node scores with the same focus behavior as render()."""
+        if not HAS_MATPLOTLIB:
+            print("matplotlib not installed. Install with: pip install matplotlib")
+            return
+
+        owned_nodes = owned_nodes or set()
+
+        if radius >= 0 and owned_nodes:
+            visible_nodes = self.get_neighborhood(owned_nodes, radius)
+        else:
+            visible_nodes = set(self.graph.nodes())
+
+        graph_to_render = self.graph.subgraph(visible_nodes)
+        if graph_to_render.number_of_nodes() == 0:
+            print("No nodes available to render heatmap.")
+            return
+
+        node_scores = NodeValueStrategy(self.graph_data).node_scores
+        pos = nx.spring_layout(graph_to_render, seed=42)
+        nodes_in_view = list(graph_to_render.nodes())
+        scores = [node_scores.get(node_id, 0.0) for node_id in nodes_in_view]
+        node_sizes = [300 + self.nodes.get(n, {}).get("utility_qubits", 1) * 100 for n in nodes_in_view]
+
+        fig, ax = plt.subplots(figsize=figsize)
+        scatter = nx.draw_networkx_nodes(
+            graph_to_render,
+            pos,
+            node_color=scores,
+            cmap=cmap,
+            node_size=node_sizes,
+            ax=ax,
+            edgecolors="black",
+        )
+        nx.draw_networkx_edges(graph_to_render, pos, edge_color="#9E9E9E", width=1, ax=ax)
+        ax.set_title("Node Score Heatmap")
+        fig.colorbar(scatter, ax=ax, label="Score")
+        ax.axis("off")
+
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path, dpi=150, bbox_inches="tight")
+            print(f"Saved to {save_path}")
+        else:
+            plt.show()
