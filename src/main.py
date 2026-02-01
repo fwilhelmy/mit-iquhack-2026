@@ -137,9 +137,10 @@ def main() -> None:
 
     ensure_starting_node(client)
     # game.print_status()
-    graph = game.get_graph_raw()
-    status = client.get_status()
-    base_strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    # graph = game.get_graph_raw()
+    # status = client.get_status()
+    # base_strategy = AdaptiveStrategy(graph, owned_nodes=status.get("owned_nodes", []))
+    base_strategy = NaiveStrategy()
     strategy = BlackListStrategy(base_strategy)
     print("Starting auto-claim loop.")
     all_attempts: List[Dict[str, Any]] = []
@@ -150,7 +151,7 @@ def main() -> None:
                 game,
                 strategy=strategy,
                 circuit_cls=ShaneCircuit,
-                max_attempts=3,
+                max_attempts=2,
             )
             all_attempts.extend(attempts)
             if target_edge and (not result.get("ok") or not (result.get("data") or {}).get("success")):
@@ -172,14 +173,13 @@ def main() -> None:
                     status = client.get_status()
                     budget = status.get("budget", 0)
                     session_id = status.get("session_id", "Unknown")
-                    session_name = status.get("name") or name
                     message = (
                         "```\n"
                         "Claim success\n"
                         f"Edge: {edge_name}\n"
                         f"Edge nodes: {edge_nodes_display}\n"
                         f"Player: {player_id}{f' ({name})' if name else ''}\n"
-                        f"Session: {session_id}{f' ({session_name})' if session_name else ''}\n"
+                        f"Session:\n"
                         f"Score: {score}\n"
                         f"Budget: {budget}\n"
                         f"Fidelity: {fidelity:.4f} (threshold: {threshold:.4f})\n"
