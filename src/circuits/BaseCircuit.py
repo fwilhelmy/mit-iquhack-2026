@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Dict
 
-from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, qasm3
+from qiskit import QuantumCircuit, qasm3
 
 
 class BaseCircuit(ABC):
@@ -12,12 +13,25 @@ class BaseCircuit(ABC):
     min_bell_pairs = 1
     max_bell_pairs = 8
 
-    def __init__(
-        self,
-        num_bell_pairs: int = 2,
-        flag_bit: int = 0,
-        circuit_path: Path | None = None,
-    ) -> None:
+    def __init__(self, circuit_path: Path | None = None) -> None:
+        self.circuit_path = circuit_path
+        self._circuit: QuantumCircuit | None = None
+
+    @abstractmethod
+    def build_circuit(self, edge: Dict[str, Any]) -> tuple[QuantumCircuit, int, int]:
+        """Build the circuit if one is not loaded from disk."""
+
+    @abstractmethod
+    def get_num_bell_pairs(self, edge: Dict[str, Any]) -> int:
+        """Choose the number of Bell pairs based on edge difficulty and threshold."""
+
+    @abstractmethod
+    def get_flag_qubit(self, edge: Dict[str, Any]) -> int:
+        """Choose the classical flag bit index for post-selection."""
+
+    def validate_edge(self, edge: Dict[str, Any]) -> None:
+        """Validate edge metadata against circuit limits."""
+        num_bell_pairs = self.get_num_bell_pairs(edge)
         if num_bell_pairs < self.min_bell_pairs:
             raise ValueError(
                 f"num_bell_pairs must be >= {self.min_bell_pairs} for {self.__class__.__name__}."
@@ -26,16 +40,9 @@ class BaseCircuit(ABC):
             raise ValueError(
                 f"num_bell_pairs must be <= {self.max_bell_pairs} for {self.__class__.__name__}."
             )
-        self.num_bell_pairs = num_bell_pairs
-        self.flag_bit = flag_bit
-        self.circuit_path = circuit_path
-        self._circuit: QuantumCircuit | None = None
 
-    @abstractmethod
-    def build_circuit(self) -> QuantumCircuit:
-        """Build the circuit if one is not loaded from disk."""
-
-    def load(self) -> QuantumCircuit:
+    def load(self, edge: Dict[str, Any]) -> QuantumCircuit:
+        self.validate_edge(edge)
         if self._circuit is not None:
             return self._circuit
 
@@ -47,12 +54,11 @@ class BaseCircuit(ABC):
             self._circuit = qasm3.loads(qasm_text)
             return self._circuit
 
-        self._circuit = self.build_circuit()
-        return self._circuit
+        circuit, _, _ = self.build_circuit(edge)
+        return circuit
 
-    @property
-    def circuit(self) -> QuantumCircuit:
-        return self.load()
+    def circuit_for_edge(self, edge: Dict[str, Any]) -> QuantumCircuit:
+        return self.load(edge)
 
-    def qasm(self) -> str:
-        return qasm3.dumps(self.circuit)
+    def qasm(self, edge: Dict[str, Any]) -> str:
+        return qasm3.dumps(self.circuit_for_edge(edge))

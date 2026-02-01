@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
+from graph_types import Edge
 from .BaseStrategy import BaseStrategy
-
-Edge = Dict[str, Any]
 
 
 class ManualStrategy(BaseStrategy):
@@ -47,24 +46,3 @@ class ManualStrategy(BaseStrategy):
 
         print("Edge not found in the claimable list.")
         return None
-
-    def choose_num_bell_pairs(
-        self,
-        edge: Edge,
-        min_pairs: int = 1,
-        max_pairs: int = 8,
-    ) -> int:
-        """Prompt the user to choose how many Bell pairs to use."""
-        prompt = (
-            f"Enter Bell pairs to request ({min_pairs}-{max_pairs}, "
-            f"blank for {min_pairs}): "
-        )
-        selection = input(prompt).strip()
-        if not selection:
-            return min_pairs
-        if selection.isdigit():
-            value = int(selection)
-            if min_pairs <= value <= max_pairs:
-                return value
-        print(f"Invalid selection. Using {min_pairs} Bell pairs.")
-        return min_pairs

@@ -3,7 +3,10 @@ GraphTool - Client-side visualization for the quantum network graph.
 """
 
 from typing import Dict, List, Optional, Set, Tuple
+
 import networkx as nx
+
+from graph_types import Edge, EdgeId, GraphData, Node
 
 try:
     import matplotlib.pyplot as plt
@@ -15,14 +18,14 @@ except ImportError:
 class GraphTool:
     """Visualization tool for the quantum network graph."""
 
-    def __init__(self, graph_data: Optional[Dict] = None):
+    def __init__(self, graph_data: Optional[GraphData] = None):
         self.graph: nx.Graph = nx.Graph()
-        self.nodes: Dict[str, Dict] = {}
-        self.edges: Dict[Tuple[str, str], Dict] = {}
+        self.nodes: Dict[str, Node] = {}
+        self.edges: Dict[EdgeId, Edge] = {}
         if graph_data:
             self.load_from_json(graph_data)
 
-    def load_from_json(self, graph_data: Dict) -> None:
+    def load_from_json(self, graph_data: GraphData) -> None:
         """Load graph from server JSON response."""
         self.graph.clear()
         self.nodes.clear()
@@ -39,10 +42,10 @@ class GraphTool:
             self.edges[(edge_id[1], edge_id[0])] = edge
             self.graph.add_edge(edge_id[0], edge_id[1])
 
-    def get_node(self, node_id: str) -> Optional[Dict]:
+    def get_node(self, node_id: str) -> Optional[Node]:
         return self.nodes.get(node_id)
 
-    def get_edge(self, node1: str, node2: str) -> Optional[Dict]:
+    def get_edge(self, node1: str, node2: str) -> Optional[Edge]:
         return self.edges.get((node1, node2))
 
     def get_neighbors(self, node_id: str) -> List[str]:

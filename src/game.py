@@ -6,7 +6,8 @@ import pandas as pd
 
 from client import GameClient
 from circuits import BaseCircuit
-from utils import visualization
+from graph_types import Edge, GraphData, Node
+from utils import discord, visualization
 
 GraphFrames = Dict[str, pd.DataFrame]
 
@@ -16,10 +17,10 @@ class Game:
 
     def __init__(self, client: GameClient) -> None:
         self.client = client
-        self._cached_graph: Optional[Dict[str, Any]] = None
+        self._cached_graph: Optional[GraphData] = None
         self._cached_graph_frames: Optional[GraphFrames] = None
 
-    def _to_graph_frames(self, graph: Dict[str, Any]) -> GraphFrames:
+    def _to_graph_frames(self, graph: GraphData) -> GraphFrames:
         nodes = pd.DataFrame(graph.get("nodes", []))
         edges = pd.DataFrame(graph.get("edges", []))
         if not edges.empty and "edge_id" in edges.columns:
@@ -27,7 +28,7 @@ class Game:
             edges[["node_a", "node_b"]] = pd.DataFrame(edges["edge_id"].tolist(), index=edges.index)
         return {"nodes": nodes, "edges": edges}
 
-    def get_graph_raw(self, force: bool = False) -> Dict[str, Any]:
+    def get_graph_raw(self, force: bool = False) -> GraphData:
         """Get the quantum network graph structure (cached)."""
         if force or self._cached_graph is None:
             self._cached_graph = self.client.get_graph_raw()
@@ -39,7 +40,7 @@ class Game:
             self._cached_graph_frames = self._to_graph_frames(self.get_graph_raw(force=force))
         return self._cached_graph_frames
 
-    def get_claimable_edges(self) -> List[Dict[str, Any]]:
+    def get_claimable_edges(self) -> List[Edge]:
         """Get edges adjacent to owned nodes that can be claimed."""
         status = self.client.get_status()
         owned = set(status.get("owned_nodes", []))
@@ -58,8 +59,7 @@ class Game:
         self,
         edge_id: Tuple[str, str],
         circuit: BaseCircuit,
-        num_bell_pairs: int | None = None,
-        flag_bit: int | None = None,
+        edge_info: Dict[str, Any] | None = None,
         capture_mode: str = "real",
     ) -> Dict[str, Any]:
         """Claim an edge using a circuit instance.
@@ -67,21 +67,22 @@ class Game:
         Args:
             edge_id: Tuple of (node_a, node_b)
             circuit: Circuit instance used for distillation.
-            num_bell_pairs: Override for the number of Bell pairs to request.
-            flag_bit: Override for the flag bit index used for post-selection.
+            edge_info: Edge metadata used to configure circuit parameters.
             capture_mode: "real" to post to the API, "sim" to simulate locally.
         """
-        resolved_pairs = num_bell_pairs if num_bell_pairs is not None else circuit.num_bell_pairs
-        resolved_flag = flag_bit if flag_bit is not None else circuit.flag_bit
+        resolved_edge = edge_info or self.get_edge_info(edge_id[0], edge_id[1])
+        if resolved_edge is None:
+            raise ValueError("Edge metadata is required to claim an edge.")
+        resolved_pairs = circuit.get_num_bell_pairs(resolved_edge)
+        resolved_flag = circuit.get_flag_qubit(resolved_edge)
         mode = capture_mode.lower()
         if mode == "sim":
             from utils import simulation
 
-            edge_info = self.get_edge_info(edge_id[0], edge_id[1])
-            threshold = edge_info.get("base_threshold") if edge_info else None
+            threshold = resolved_edge.get("base_threshold")
             return simulation.simulate_capture(
                 edge_id=edge_id,
-                circuit=circuit.circuit,
+                circuit=circuit.circuit_for_edge(resolved_edge),
                 num_bell_pairs=resolved_pairs,
                 flag_bit=resolved_flag,
                 threshold=threshold,
@@ -105,7 +106,7 @@ class Game:
         """Get neighboring nodes for a given node ID."""
         return self.get_graph_tool(force=force).get_neighbors(node_id)
 
-    def get_node_info(self, node_id: str) -> Optional[Dict[str, Any]]:
+    def get_node_info(self, node_id: str) -> Optional[Node]:
         """Get information about a specific node."""
         nodes = self.get_graph_frames().get("nodes", pd.DataFrame())
         if nodes.empty or "node_id" not in nodes.columns:
@@ -115,7 +116,7 @@ class Game:
             return None
         return match.iloc[0].to_dict()
 
-    def get_edge_info(self, node_a: str, node_b: str) -> Optional[Dict[str, Any]]:
+    def get_edge_info(self, node_a: str, node_b: str) -> Optional[Edge]:
         """Get information about a specific edge."""
         edges = self.get_graph_frames().get("edges", pd.DataFrame())
         if edges.empty or "edge_id" not in edges.columns:
