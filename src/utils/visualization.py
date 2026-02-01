@@ -201,43 +201,49 @@ class GraphTool:
 
     def render_degree_heatmap(
         self,
+        owned_nodes: Optional[Set[str]] = None,
+        radius: int = 2,
         figsize: Tuple[int, int] = (10, 6),
         save_path: Optional[str] = None,
         cmap: str = "viridis",
     ) -> None:
-        """Render a heatmap of nodes based on coordinates and NodeValueStrategy scores."""
+        """Render a heatmap of node scores with the same focus behavior as render()."""
         if not HAS_MATPLOTLIB:
             print("matplotlib not installed. Install with: pip install matplotlib")
             return
 
-        longitudes = []
-        latitudes = []
-        scores = []
-        node_scores = NodeValueStrategy(self.graph_data).node_scores
+        owned_nodes = owned_nodes or set()
 
-        for node in self.graph_data.get("nodes", []):
-            node_id = node.get("node_id")
-            if not node_id:
-                continue
-            latitude = node.get("latitude")
-            longitude = node.get("longitude")
-            if latitude is None or longitude is None:
-                continue
-            longitudes.append(longitude)
-            latitudes.append(latitude)
-            scores.append(node_scores.get(node_id, 0.0))
+        if radius >= 0 and owned_nodes:
+            visible_nodes = self.get_neighborhood(owned_nodes, radius)
+        else:
+            visible_nodes = set(self.graph.nodes())
 
-        if not longitudes:
-            print("No node coordinates available to render heatmap.")
+        graph_to_render = self.graph.subgraph(visible_nodes)
+        if graph_to_render.number_of_nodes() == 0:
+            print("No nodes available to render heatmap.")
             return
 
+        node_scores = NodeValueStrategy(self.graph_data).node_scores
+        pos = nx.spring_layout(graph_to_render, seed=42)
+        nodes_in_view = list(graph_to_render.nodes())
+        scores = [node_scores.get(node_id, 0.0) for node_id in nodes_in_view]
+        node_sizes = [300 + self.nodes.get(n, {}).get("utility_qubits", 1) * 100 for n in nodes_in_view]
+
         fig, ax = plt.subplots(figsize=figsize)
-        scatter = ax.scatter(longitudes, latitudes, c=scores, cmap=cmap, s=60, alpha=0.8, edgecolors="black")
+        scatter = nx.draw_networkx_nodes(
+            graph_to_render,
+            pos,
+            node_color=scores,
+            cmap=cmap,
+            node_size=node_sizes,
+            ax=ax,
+            edgecolors="black",
+        )
+        nx.draw_networkx_edges(graph_to_render, pos, edge_color="#9E9E9E", width=1, ax=ax)
         ax.set_title("Node Score Heatmap")
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
         fig.colorbar(scatter, ax=ax, label="Score")
-        ax.grid(True, linestyle="--", alpha=0.4)
+        ax.axis("off")
 
         plt.tight_layout()
         if save_path:
