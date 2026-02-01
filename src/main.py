@@ -86,7 +86,7 @@ def main() -> None:
     game = Game(client)
 
     ensure_starting_node(client)
-    game.print_status()
+    # game.print_status()
     strategy = ManualStrategy()
     print(
         "Starting auto-claim loop. "
