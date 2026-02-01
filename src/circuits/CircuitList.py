@@ -39,42 +39,43 @@ def measure_x_errors():
 
     return qc, 1
 
+
+def create_x():
+    qubit_pairs = 2
+    qc = QuantumCircuit(qubit_pairs * 2, 3)
+
+    qc.cx(1, 0)
+    qc.cx(2, 3)
+
+    qc.measure(0, 0)
+    qc.measure(3, 1)
+    condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
+    qc.store(qc.clbits[2], condition1)
+    return qc
+
+def create_z():
+    qubit_pairs = 2
+    qc = QuantumCircuit(qubit_pairs * 2, 3)
+
+    qc.cx(0, qubit_pairs - 1)
+    qc.h(0)
+    qc.cx(qubit_pairs * 2 - 1, qubit_pairs)
+    qc.h(qubit_pairs * 2 - 1)
+
+    qc.measure(0, 0)
+    qc.measure(3, 1)
+
+    condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
+    qc.store(qc.clbits[2], condition1)
+    qc.name = "Z_distillation"
+    return qc
+
 def shane_block_xx_x_4():
     """Example distillation circuit template for 2 Bell pairs."""
     num_bell_pairs = 4
     qr = QuantumRegister(num_bell_pairs*2, 'q')  # 4 qubits for 2 Bell pairs
     cr = ClassicalRegister(num_bell_pairs*3, 'c')  # Classical bits for measurements + flag
     qc = QuantumCircuit(qr, cr)
-
-    def create_x():
-        qubit_pairs = 2
-        qc = QuantumCircuit(qubit_pairs * 2, 3)
-
-        qc.cx(1, 0)
-        qc.cx(2, 3)
-
-        qc.measure(0, 0)
-        qc.measure(3, 1)
-        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
-        qc.store(qc.clbits[2], condition1)
-        return qc
-
-    def create_z():
-        qubit_pairs = 2
-        qc = QuantumCircuit(qubit_pairs * 2, 3)
-
-        qc.cx(0, qubit_pairs - 1)
-        qc.h(0)
-        qc.cx(qubit_pairs * 2 - 1, qubit_pairs)
-        qc.h(qubit_pairs * 2 - 1)
-
-        qc.measure(0, 0)
-        qc.measure(3, 1)
-
-        condition1 = expr.bit_xor(expr.lift(qc.clbits[0]), expr.lift(qc.clbits[1]))
-        qc.store(qc.clbits[2], condition1)
-        qc.name = "Z_distillation"
-        return qc
 
     qz = create_z()
     qx = create_x()
@@ -148,3 +149,87 @@ def aaron_circuit_4pairs():
     qc.measure(1, 6)
     return qc, 4
 
+
+def shane_distillation_circuit_1():
+    "Basically, the identity"
+    qc = QuantumCircuit(2, 1)
+
+def shane_distillation_circuit_2(t):
+    """Example distillation circuit template for 2 Bell pairs."""
+    """Minimum case"""
+    "t = z or x"
+    if t == "z":
+        q = create_z()
+    elif t == "x":
+        q = create_x()
+    num_bell_pairs = 2
+    qr = QuantumRegister(num_bell_pairs * 2, 'q')  # 4 qubits for 2 Bell pairs
+    cr = ClassicalRegister(num_bell_pairs * 3, 'c')  # Classical bits for measurements + flag
+    qc = QuantumCircuit(qr, cr)
+
+    qc.compose(q, qubits=[0, 1, 2, 3], clbits=range(3), inplace=True)
+    return qc
+
+
+def shane_distillation_circuit_4(t):
+    """Example distillation circuit template for 2 Bell pairs."""
+    "t = z or x"
+    if t == "z":
+        q = create_z()
+    elif t == "x":
+        q = create_x()
+    num_bell_pairs = 4
+    qr = QuantumRegister(num_bell_pairs * 2, 'q')  # 4 qubits for 2 Bell pairs
+    cr = ClassicalRegister(num_bell_pairs * 3, 'c')  # Classical bits for measurements + flag
+    qc = QuantumCircuit(qr, cr)
+
+    ##ORDERING IS IMPORTANT HERE
+    qc.compose(q, qubits=[0, 2, 3, 1], clbits=range(3), inplace=True)
+    qc.compose(q, qubits=[6, 4, 5, 7], clbits=range(3, 6), inplace=True)
+    qc.compose(q, qubits=[2, 3, 4, 5], clbits=range(6, 9), inplace=True)
+
+    false1 = expr.bit_or(expr.lift(qc.clbits[2]), expr.lift(qc.clbits[5]))
+    qc.store(qc.clbits[9], false1)
+    false_condition = expr.bit_or(expr.lift(qc.clbits[8]), expr.lift(qc.clbits[9]))
+    qc.store(qc.clbits[10], false_condition)
+
+    return qc
+
+def distillation_circuit_6(t):
+    """Example distillation circuit template for 2 Bell pairs."""
+    "t = z or x"
+    if t == "z":
+        q = create_z()
+    elif t == "x":
+        q = create_x()
+    num_bell_pairs = 6
+    qr = QuantumRegister(num_bell_pairs * 2, 'q')  # 4 qubits for 2 Bell pairs
+    cr = ClassicalRegister(19, 'c')  # Classical bits for measurements + flag
+    qc = QuantumCircuit(qr, cr)
+
+    qz = create_z()
+    qx = create_x()
+    ##ORDERING IS IMPORTANT HERE
+    # Stage 1
+    qc.compose(qx, qubits=[0, 1, 2, 3], clbits=range(3), inplace=True)
+    qc.compose(qx, qubits=[8, 9, 10, 11], clbits=range(3, 6), inplace=True)
+    # Stage 2
+    qc.compose(qx, qubits=[1, 4, 5, 2], clbits=range(6, 9), inplace=True)
+    qc.compose(qx, qubits=[9, 6, 7, 10], clbits=range(9, 12), inplace=True)
+    # Stage 3
+    qc.compose(qx, qubits=[4, 5, 6, 7], clbits=range(12, 15), inplace=True)
+
+    # COMPARISONS
+    false1 = expr.bit_or(expr.lift(qc.clbits[2]), expr.lift(qc.clbits[5]))
+    qc.store(qc.clbits[15], false1)
+    false2 = expr.bit_or(expr.lift(qc.clbits[8]), expr.lift(qc.clbits[11]))
+    qc.store(qc.clbits[16], false2)
+
+    # COMPARISONS STAGE 2
+    false4 = expr.bit_or(expr.lift(qc.clbits[15]), expr.lift(qc.clbits[16]))
+    qc.store(qc.clbits[17], false4)
+
+    false_condition = expr.bit_or(expr.lift(qc.clbits[14]), expr.lift(qc.clbits[17]))
+    qc.store(qc.clbits[18], false_condition)
+
+    return qc
