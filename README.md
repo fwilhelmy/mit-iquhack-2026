@@ -1,231 +1,171 @@
-# MIT iQuHack 2026 – IonQ Challenge Toolkit
-Team Blizzards (IQuHACK 2026)
+# **Team Blizzards** -  IonQ Challenge - MIT iQuHack 2026
 
-This repository contains our submission for the IonQ challenge at MIT iQuHack 2026.
-We were team Blizzards, and our work focuses on the strategy layer of a quantum
-entanglement distillation game played on a network graph.
+This repository contains our submission for the **IonQ Challenge at MIT iQuHack 2026**
 
-The project combines:
-- quantum circuit design for entanglement distillation
-- classical decision-making under uncertainty
-- budget-aware optimization on a graph
+The challenge consists of a competitive, graph-based game where players attempt to claim edges by performing **quantum entanglement distillation** under limited budget, probabilistic outcomes, and restricted quantum operations (local quantum + global classical).
 
-Our main contribution is an adaptive edge-selection strategy that balances
-expected reward, probability of success, future expansion potential, and
-long-term survivability.
+Our solution combines:
+- Modular quantum circuit design for entanglement distillation  
+- Adaptive circuit selection based on observed outcomes  
+- A classical strategy layer for node and edge selection under uncertainty  
 
 ---
 
-## Team
-
-Team Blizzards – IQuHACK 2026  
-IonQ Challenge (MIT)
-
-Team members:
-- Ismael Gonzalez
-- Shane Tendo
-- Lukas Rapp
-- Félix Wilhelmy
-- Aaron Kim
-
-This project was developed collaboratively during MIT iQuHack 2026 as part of
-the IonQ challenge, combining quantum circuit intuition with classical
-algorithmic strategies under uncertainty and resource constraints. 
+## Team Members
+- **Ismael Gonzalez**
+- **Shane Tendo**
+- **Lukas Rapp**
+- **Félix Wilhelmy**
+- **Aaron Kim**
 
 ---
 
-## Problem Overview
+## Project Overview
 
-The game is played on a graph-based quantum network.
+At a high level, the game requires solving two tightly coupled problems:
 
-- Nodes provide rewards:
-  - utility qubits
-  - bonus Bell pairs
-  - limited capacity (competition matters)
-- Edges can be claimed by running a quantum distillation circuit
-  - each attempt is probabilistic
-  - success depends on fidelity exceeding a threshold
-  - Bell pairs are only consumed if the claim succeeds
+1. **How to distill entanglement efficiently** given noisy Bell pairs and strict operational constraints
+2. **Which edge to attempt next** to maximize long-term reward while avoiding early elimination due to budget exhaustion
 
-Every move is therefore a risk–reward decision:
-high-value nodes are often harder to claim, and overspending Bell pairs can
-end the game early.
+We address this by:
+- Designing **reusable, modular distillation circuits** that can scale in strength
+- Using **feedback from previous attempts** (fidelity, success/failure) to adapt circuits
+- Ranking nodes and edges using a **value-based heuristic** combined with learned success probabilities
+- Enforcing **budget safeguards** to ensure survivability over the full game
 
 ---
 
 ## Strategy Overview
 
-Our strategy evaluates all claimable edges and assigns each an expected value.
-At each turn, the edge with the highest expected value is selected.
+Our strategy operates as a closed feedback loop:
 
-The score of an edge combines four main components:
+1. Rank nodes and edges using a classical scoring heuristic
+2. Select a promising edge that can be claimed within a safe budget margin
+3. Choose and execute an adaptive distillation circuit
+4. Learn from the outcome (success, fidelity, threshold)
+5. Update future decisions accordingly
 
-1. Immediate node value
-   - utility qubits
-   - bonus Bell pairs
-   - capacity (treated sublinearly to reflect diminishing returns)
-
-2. Future potential (lookahead)
-   - approximates the value of nearby nodes unlocked after capture
-   - implemented as a discounted 2-hop neighborhood heuristic
-
-3. Distance bias
-   - favors expansion near already-owned nodes
-   - reduces fragmentation and overextension
-
-4. Probability of success
-   - estimates how likely the claim is to succeed
-   - learned online from previous attempts
-
-In simplified terms, the strategy optimizes:
-
-(expected node value + future potential) × probability of success
+The classical and quantum components are designed to reinforce each other rather than operate independently.
 
 ---
 
-## Online Learning: Bandit Model
+## Modular Entanglement Distillation
 
-To estimate probability of success, we use a lightweight multi-armed bandit model.
+### Basic Distillation Blocks (X and Z Errors)
 
-- Edges are grouped into buckets by difficulty and fidelity threshold
-- Each bucket maintains a running estimate of success rate
-- Early in the game, the strategy relies on heuristic priors
-- As more data is collected, decisions become data-driven
+The challenge restricts players to **local quantum operations** combined with **global classical communication**.  
+Our distillation circuits respect this by using CNOT-based parity checks performed locally on Bell pairs.
 
-This allows the strategy to adapt dynamically during a game instead of relying
-on fixed probabilities.
+We implement two core distillation primitives:
+- **X-basis distillation** (targeting bit-flip–type errors)
+- **Z-basis distillation** (targeting phase-flip–type errors)
 
----
+Each block:
+- Measures Bell pair parity locally
+- Uses classical bit logic to validate correctness
+- Discards invalid pairs via a flag bit
 
-## Budget Safeguards (Implemented)
-
-A key design choice is survivability.
-
-The strategy enforces a strict safeguard:
-- it never spends the entire Bell-pair budget
-- a small reserve is always kept
-- if no edge can be claimed safely, the strategy skips the turn
-
-This prevents catastrophic all-in failures and ensures long-term stability,
-even when aggressive heuristics are used.
+![Basic distillation blocks](./figures/distillation_blocks_x_and_z.png)
 
 ---
 
-## Aggressive vs Defensive Tradeoff (Future Direction)
+### Scaling via Modular Composition
 
-The strategy is designed around a tunable risk profile, which can be exposed
-as a single aggressiveness slider.
+Rather than designing monolithic circuits, we build **larger, stronger circuits by composing small reusable blocks**.
 
-Aggressive behavior:
-- prioritizes utility qubits
-- expands quickly using heuristics
-- accepts higher short-term risk
+This allows us to:
+- Start with cheap, low-depth circuits
+- Gradually increase strength only when needed
+- Trade off fidelity vs success probability dynamically
 
-Defensive behavior:
-- prioritizes bonus Bell pairs
-- favors high-probability claims
-- allocates more Bell pairs per attempt
+We scale naturally from:
+- 2–3 Bell pair circuits (cheap, high success rate)
+- 4 Bell pair circuits (higher fidelity)
+- 6+ Bell pair circuits (strong but expensive)
 
-The budget safeguard remains active in all modes.
-This tradeoff is a design direction rather than a fully implemented feature,
-but the current scoring weights already support it.
+![Modular distillation scaling](./figures/modular_distillation.png)
 
 ---
 
-## What’s Included
+### Adaptive Circuit Selection Algorithm
 
-- Game client and session manager for the IonQ challenge API
-- Multiple edge-selection strategies (manual, naive, adaptive)
-- Adaptive strategy with node scoring, lookahead, and online learning
-- Circuit helpers for entanglement distillation
-- Visualization tools for graph structure and node scores
-- Notebooks and resources used during development
+Circuit parameters are chosen dynamically using the following logic:
 
----
+![Circuit Selection Strategy](./figures/circuit_selection_algo.png)
 
-## Quick Start
-
-1) Install dependencies
-
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-2) Run the auto-claim loop
-
-python src/main.py --strategy adaptive
-
-You will be prompted for your player ID and name the first time.
-A session.json file is saved locally and reused on subsequent runs.
-
-3) Reset a session (optional)
-
-python src/reset.py
+This approach ensures that circuit complexity increases **only in response to evidence**, not speculation.
 
 ---
 
-## Strategies
+## Node and Edge Selection Strategy
 
-Strategies control which edge to claim next:
+### Node Scoring
 
-- dummy: selects nothing (testing and wiring)
-- manual: prompts for an edge
-- naive: simple heuristic
-- adaptive: node scoring, lookahead, and learned success probabilities
+Each node in the graph is assigned a score based on:
+- Utility qubits
+- Bonus Bell pairs
+- Capacity (treated sub-linearly)
+- Graph degree
+- Distance from currently owned nodes
 
-New strategies can be added by extending BaseStrategy and wiring them into
-src/main.py.
+Scores are dampened by distance to encourage contiguous expansion rather than risky jumps.
 
----
-
-## Circuits
-
-The circuits module contains templates for entanglement distillation and a
-BaseCircuit interface used by the game loop.
-
-Different circuit variants can adapt Bell-pair usage and distillation type
-based on edge difficulty and required fidelity.
+![Node score heatmap](./figures/node_score_heatmap.png)
 
 ---
 
-## Visualization
+### Edge Evaluation
 
-Two visualization utilities are provided:
+Edges are ranked based on:
+- The value of the newly unlocked node
+- Local expansion potential (nearby high-value nodes)
+- Estimated probability of successful claim
+- A small contribution from the origin node
 
-- Interactive graph rendering with claimable edges highlighted
-- Node score heatmap with owned nodes highlighted
-
-Run the heatmap with:
-
-python src/heatmap.py
-
----
-
-## Project Layout
-
-.
-├── 2026-IonQ-challenge/   Official challenge docs and reference client
-├── notebooks/             Experiments and analysis
-├── resources/             Reference PDFs
-├── src/
-│   ├── circuits/          Distillation circuit implementations
-│   ├── strategy/          Edge selection strategies
-│   ├── utils/             Visualization and helpers
-│   ├── client.py          API client
-│   ├── game.py            Game helpers and caching
-│   ├── main.py            Auto-claim loop
-│   ├── heatmap.py         Node score visualization
-│   └── reset.py           Session reset utility
-├── requirements.txt
-└── README.md
+To avoid catastrophic failures, we enforce a **budget safeguard**:
+- The strategy will not select an edge if claiming it would reduce the remaining budget below a fixed safety threshold
+- If no safe edge exists, the strategy abstains rather than risking elimination
 
 ---
 
-## Takeaway
+## Unimplemented but Planned Extensions
 
-This project shows how combining simple heuristics, online learning, and strict
-budget control can turn a stochastic quantum networking game into a stable and
-adaptive optimization problem.
+Due to time constraints, the following features were designed conceptually but not fully implemented:
 
-The strategy is intentionally lightweight, interpretable, and designed to
-extend naturally as circuit models and game mechanics evolve.
+### Aggressive vs Defensive Strategy Slider
+
+A tunable parameter that would interpolate between:
+- **Aggressive play**
+  - Prioritize utility qubits
+  - Faster expansion
+  - Riskier claims
+
+- **Defensive play**
+  - Prioritize Bell pairs and capacity
+  - Greedy multi-Bell-pair claims
+  - Higher survivability
+
+This would allow real-time adaptation to game state and opponent behavior.
+
+---
+
+### Global Pathing via Dynamic Programming and Network Flow
+
+We also planned a higher-level pathing algorithm that would:
+- Evaluate multi-step paths through the graph
+- Use dynamic programming to estimate long-term value
+- Apply network flow techniques to identify high-value corridors
+
+This would complement the local heuristic with global planning but was beyond the hackathon time budget.
+
+---
+
+## Credits, Thanks, and Acknowledgements
+
+We thank:
+- **IonQ** for designing a challenging and well-balanced quantum strategy problem
+- **MIT iQuHack 2026** organizers and mentors for their support
+
+This project was developed during a 24-hour hackathon and reflects a collaborative effort across quantum circuit design, classical algorithms, and strategy engineering.
+
+For the official challenge materials and API reference, see: `resources/2026-IonQ-challenge/README.md`
